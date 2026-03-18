@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = 'https://timso-backend.vercel.app';
 
 /* ══ AUTO TOKEN REFRESH INTERCEPTOR ══ */
 let isRefreshing = false;

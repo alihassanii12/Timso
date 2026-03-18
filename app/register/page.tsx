@@ -120,6 +120,9 @@ const ROLES: RoleDef[] = [
 
 type Step = 1 | 2 | 3;
 
+// 🔥 YAHAN ADD KIYA - Vercel backend URL
+const BASE = 'https://timso-backend.vercel.app';
+
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -191,7 +194,7 @@ export default function RegisterPage() {
     setLoading(true); setServerError('');
     try {
       const { data } = await axios.post(
-        'http://localhost:5000/api/auth/register',
+        `${BASE}/api/auth/register`,  // 🔥 YAHAN CHANGE KIYA
         { fullname: form.fullname, username: form.username, email: form.email, password: form.password, confirmPassword: form.confirmPassword, role: selectedRole },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );

@@ -63,6 +63,9 @@ body.cur-on-dark #cur-arrow path{fill:#fff!important;stroke:#fff!important}
 }
 `;
 
+// 🔥 YAHAN CHANGE KIYA - direct Vercel backend URL
+const BASE = 'https://timso-backend.vercel.app';
+
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: '', password: '' });
@@ -119,7 +122,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { data } = await axios.post(
-        'http://localhost:5000/api/auth/login',
+        `${BASE}/api/auth/login`,  // 🔥 YAHAN BHI CHANGE
         form,
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
