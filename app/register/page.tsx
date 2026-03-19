@@ -278,7 +278,7 @@ const BASE = 'https://timso-backend-n5w1.vercel.app';
           timso
           <span className="a-logo a-logop" style={{position:'relative',width:10,height:10,borderRadius:'50%',border:'2.5px solid #0f0e0c',marginLeft:2,display:'inline-block'}}/>
         </button>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:13}}>
           <span className="rg-nav-hint" style={{fontSize:13,color:'#6b6860'}}>Already have an account?</span>
           <button onClick={() => router.push('/login')} className="nav-a"
             style={{fontSize:13,fontWeight:600,color:'#0f0e0c',padding:'8px 16px',borderRadius:100,border:'1px solid rgba(0,0,0,.1)',background:'transparent',cursor:'pointer',fontFamily:'inherit'}}>
