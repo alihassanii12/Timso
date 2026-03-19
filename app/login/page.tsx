@@ -70,7 +70,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // Cursor effect (same as register page)
+  // ✅ Use environment variable with fallback to working backend
+  const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
+
+  // Cursor effect
   useEffect(() => {
     const isMobile = window.innerWidth <= 768;
     if (isMobile) return;
@@ -115,15 +118,14 @@ export default function LoginPage() {
     return Object.keys(errs).length === 0;
   };
 
-  // ✅ Same BASE URL as register page
-  const BASE = 'https://timso-backend-n5w1.vercel.app';
-
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
     try {
+      console.log('🔍 Attempting login to:', `${BASE}/api/auth/login`);
+      
       const { data } = await axios.post(
         `${BASE}/api/auth/login`,
         {
@@ -136,16 +138,23 @@ export default function LoginPage() {
         }
       );
 
-      // Save token if present (same as register)
+      console.log('✅ Login response:', data);
+
+      // Save token if present
       const token = data?.accessToken;
       if (token) {
         document.cookie = `auth-token=${token}; path=/; SameSite=Lax; max-age=86400`;
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect based on response
+      if (data?.requiresOtp) {
+        router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      } else {
+        router.push('/dashboard');
+      }
 
     } catch (err: unknown) {
+      console.error('❌ Login error:', err);
       const ax = err as { response?: { data?: { message?: string; errors?: Record<string, string> } } };
       const res = ax?.response?.data;
       
@@ -169,7 +178,7 @@ export default function LoginPage() {
         <path d="M4 2L20 10.5L12.5 12.5L10 20L4 2Z" fill="#0f0e0c" stroke="#0f0e0c" strokeWidth="1" strokeLinejoin="round"/>
       </svg>
 
-      {/* ── NAVIGATION ── */}
+      {/* Navigation */}
       <nav className="login-nav" style={{
         position:'fixed',top:0,left:0,right:0,zIndex:50,
         display:'flex',alignItems:'center',justifyContent:'space-between',
@@ -191,7 +200,7 @@ export default function LoginPage() {
         </div>
       </nav>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* Main Content */}
       <div style={{
         minHeight:'100svh',display:'flex',alignItems:'center',justifyContent:'center',
         background:'#faf9f7',
@@ -210,7 +219,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Social buttons */}
+          {/* Social Buttons */}
           <div className="a-rise" style={{animationDelay:'.05s',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:'clamp(16px,3vw,24px)'}}>
             <button className="social-btn">
               <svg width="18" height="18" viewBox="0 0 18 18">
