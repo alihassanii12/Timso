@@ -186,7 +186,7 @@ export default function RegisterPage() {
   const goStep2 = () => { if (validateStep1()) setStep(2); };
   const goStep3 = (e: FormEvent) => { e.preventDefault(); if (validateStep2()) setStep(3); };
 
-const BASE = 'https://timso-backend.vercel.app';
+const BASE = 'https://timso-backend-n5w1.vercel.app';
 
   const submit = async () => {
     if (!selectedRole) return;
