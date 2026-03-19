@@ -120,9 +120,6 @@ const ROLES: RoleDef[] = [
 
 type Step = 1 | 2 | 3;
 
-// 🔥 YAHAN ADD KIYA - Vercel backend URL
-const BASE = 'https://timso-backend.vercel.app';
-
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -189,17 +186,38 @@ export default function RegisterPage() {
   const goStep2 = () => { if (validateStep1()) setStep(2); };
   const goStep3 = (e: FormEvent) => { e.preventDefault(); if (validateStep2()) setStep(3); };
 
+  const BASE = 'https://timso-backend-n5w1.vercel.app';
+
   const submit = async () => {
     if (!selectedRole) return;
     setLoading(true); setServerError('');
     try {
       const { data } = await axios.post(
-        `${BASE}/api/auth/register`,  // 🔥 YAHAN CHANGE KIYA
-        { fullname: form.fullname, username: form.username, email: form.email, password: form.password, confirmPassword: form.confirmPassword, role: selectedRole },
+        `${BASE}/api/auth/register`,
+        {
+          fullname:        form.fullname,
+          username:        form.username,
+          email:           form.email,
+          password:        form.password,
+          confirmPassword: form.confirmPassword,
+          role:            selectedRole,
+        },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
-      if (data?.data?.token) document.cookie = `auth-token=${data.data.token}; path=/; SameSite=Lax`;
-      router.push('/dashboard');
+
+      // Token cookie mein save karo (data.data.token ya data.accessToken dono handle)
+      const token = data?.data?.token || data?.accessToken;
+      if (token) {
+        document.cookie = `auth-token=${token}; path=/; SameSite=Lax`;
+      }
+
+      // Backend requiresOtp: true bhejta hai → verify-email page
+      if (data?.requiresOtp) {
+        router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      } else {
+        router.push('/dashboard');
+      }
+
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string; errors?: Record<string, string> } } };
       const res = ax?.response?.data;
