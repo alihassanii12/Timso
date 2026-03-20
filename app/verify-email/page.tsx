@@ -332,18 +332,6 @@ function VerifyEmailContent() {
   );
 }
 
-function VerifyEmailContent() {
-  return (
-    <Suspense fallback={
-      <div style={{display:'flex',height:'100vh',alignItems:'center',justifyContent:'center',background:'#faf9f7'}}>
-        <div style={{width:20,height:20,border:'2px solid rgba(0,0,0,.1)',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin .65s linear infinite'}}/>
-      </div>
-    }>
-      <VerifyEmailContent />
-    </Suspense>
-  );
-}
-
 export default function VerifyEmailPage() {
   return (
     <Suspense fallback={
