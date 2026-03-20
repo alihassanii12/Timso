@@ -71,7 +71,7 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
 
   // ✅ Vercel Dashboard mein set karo: NEXT_PUBLIC_API_URL=https://timso-backend-n5w1.vercel.app
-  const BASE = process.env.NEXT_PUBLIC_API_URL!;
+ const BASE = 'https://timso-backend-n5w1.vercel.app';
 
   // Cursor effect
   useEffect(() => {
