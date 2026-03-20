@@ -21,7 +21,7 @@ export function proxy(request: NextRequest) {
   const isLoggedIn = !!accessToken;
 
   // Auth routes — logged in users ko dashboard bhejo
-  const authRoutes = ['/login', '/register', '/forgot-password'];
+  const authRoutes = ['/login', '/register', '/forgot-password','/verify-email'];
 
   // Open routes — sab access kar sakte hain
   const openRoutes = ['/', '/about'];
