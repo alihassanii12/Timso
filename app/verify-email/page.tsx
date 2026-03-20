@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 
@@ -58,7 +58,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 @media(max-width:480px){.otp-input{width:44px;height:56px;font-size:20px}.otp-wrap{gap:8px!important}}
 `;
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
@@ -329,5 +329,29 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function VerifyEmailContent() {
+  return (
+    <Suspense fallback={
+      <div style={{display:'flex',height:'100vh',alignItems:'center',justifyContent:'center',background:'#faf9f7'}}>
+        <div style={{width:20,height:20,border:'2px solid rgba(0,0,0,.1)',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin .65s linear infinite'}}/>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div style={{display:'flex',height:'100vh',alignItems:'center',justifyContent:'center',background:'#faf9f7'}}>
+        <div style={{width:20,height:20,border:'2px solid rgba(0,0,0,.1)',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin .65s linear infinite'}}/>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
