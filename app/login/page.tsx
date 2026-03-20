@@ -53,7 +53,7 @@ export default function LoginPage() {
   // ✅ FIXED: single declaration, correct fallback
   const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-  useEffect(() => {
+  useEffect(() =>  {
     const isMobile = window.innerWidth <= 768;
     if (isMobile) return;
     const cur = document.getElementById('cur') as HTMLElement;
