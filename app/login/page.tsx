@@ -70,8 +70,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // ✅ Use environment variable with fallback to working backend
-  const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
+  // ✅ Vercel Dashboard mein set karo: NEXT_PUBLIC_API_URL=https://timso-backend-n5w1.vercel.app
+  const BASE = process.env.NEXT_PUBLIC_API_URL!;
 
   // Cursor effect
   useEffect(() => {
@@ -124,29 +124,18 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      console.log('🔍 Attempting login to:', `${BASE}/api/auth/login`);
-      
       const { data } = await axios.post(
         `${BASE}/api/auth/login`,
-        {
-          email: form.email,
-          password: form.password,
-        },
-        { 
-          withCredentials: true, 
-          headers: { 'Content-Type': 'application/json' } 
-        }
+        { email: form.email, password: form.password },
+        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      console.log('✅ Login response:', data);
-
-      // Save token if present
-      const token = data?.accessToken;
+      // Token save karo
+      const token = data?.accessToken || data?.data?.token;
       if (token) {
-        document.cookie = `auth-token=${token}; path=/; SameSite=Lax; max-age=86400`;
+        document.cookie = `accessToken=${token}; path=/; SameSite=Lax; max-age=86400`;
       }
 
-      // Redirect based on response
       if (data?.requiresOtp) {
         router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
       } else {
@@ -154,10 +143,8 @@ export default function LoginPage() {
       }
 
     } catch (err: unknown) {
-      console.error('❌ Login error:', err);
       const ax = err as { response?: { data?: { message?: string; errors?: Record<string, string> } } };
       const res = ax?.response?.data;
-      
       if (res?.errors) {
         setErrors(res.errors);
       } else {
