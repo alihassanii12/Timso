@@ -112,7 +112,7 @@ export default function LoginPage() {
       }
 
       if (data?.requiresOtp) {
-        router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+        router.push("/verify-email");
       } else {
         router.push('/dashboard');
       }
