@@ -10,15 +10,10 @@ const G = `
 html{overflow-x:hidden}
 body{margin:0;cursor:none;font-family:'Outfit',sans-serif;background:#faf9f7;color:#0f0e0c;overflow-x:hidden}
 .font-syne{font-family:'Syne',sans-serif}
-
-/* ── Cursor ── */
 #cur{position:fixed;top:0;left:0;width:14px;height:14px;pointer-events:none;z-index:99999;transition:width .18s,height .18s,opacity .18s}
 body.cm #cur{width:22px!important;height:22px!important}
-body.ch #cur{width:18px!important;height:18px!important;opacity:.7}
 body.ca #cur{width:10px!important;height:10px!important;opacity:.5}
 body.cd #cur path{fill:#fff!important;stroke:#fff!important}
-
-/* ── Animations ── */
 @keyframes riseIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes logoR{0%,100%{border-color:#0f0e0c}50%{border-color:#f97316}}
 @keyframes logoRP{0%,100%{opacity:0;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
@@ -28,38 +23,23 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .a-logo{animation:logoR 3s ease-in-out infinite}
 .a-logop::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #f97316;opacity:0;animation:logoRP 3s ease-in-out infinite}
 .shake{animation:shake .4s cubic-bezier(.36,.07,.19,.97) both}
-
-/* ── Inputs ── */
 .inp{width:100%;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px 16px;font-size:14px;font-family:'Outfit',sans-serif;color:#0f0e0c;background:#fff;outline:none;transition:border-color .2s,box-shadow .2s;cursor:none}
 .inp:focus{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
 .inp.err{border-color:#ef4444;background:#fff9f9}
 .inp::placeholder{color:#9e9b94}
-
-/* ── Buttons ── */
 .btn-sub{width:100%;background:#0f0e0c;color:#fff;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;cursor:none;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-sub::before{content:'';position:absolute;inset:0;background:#f97316;transform:translateX(-101%);transition:transform .4s cubic-bezier(.16,1,.3,1);border-radius:14px}
 .btn-sub:hover::before{transform:translateX(0)}
 .btn-sub:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(249,115,22,.35)}
 .btn-sub:disabled{opacity:.5;pointer-events:none}
 .btn-sub>span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
-.btn-ghost{background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:12px;cursor:none;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;transition:all .2s}
-.btn-ghost:hover{border-color:#0f0e0c;background:#f2f0eb}
 .social-btn{width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:none;color:#0f0e0c;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
 .social-btn:hover{border-color:#0f0e0c;background:#f8f7f4;transform:translateY(-1px)}
 .nav-a{transition:all .2s;text-decoration:none}
 .nav-a:hover{background:rgba(0,0,0,.05)}
 .spin-s{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite}
-
-/* ── Responsive ── */
-@media(max-width:768px){
-  body{cursor:auto}
-  #cur{display:none}
-  .login-nav{padding:13px 16px!important}
-  .login-nav-hint{display:none!important}
-}
-@media(max-width:480px){
-  .login-h1{font-size:clamp(24px,7vw,32px)!important;letter-spacing:-1px!important}
-}
+@media(max-width:768px){body{cursor:auto}#cur{display:none}.login-nav{padding:13px 16px!important}.login-nav-hint{display:none!important}}
+@media(max-width:480px){.login-h1{font-size:clamp(24px,7vw,32px)!important;letter-spacing:-1px!important}}
 `;
 
 export default function LoginPage() {
@@ -70,10 +50,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // ✅ Vercel Dashboard mein set karo: NEXT_PUBLIC_API_URL=https://timso-backend-n5w1.vercel.app
- const BASE = 'https://timso-backend-n5w1.vercel.app';
+  // ✅ FIXED: single declaration, correct fallback
+  const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-  // Cursor effect
   useEffect(() => {
     const isMobile = window.innerWidth <= 768;
     if (isMobile) return;
@@ -108,12 +87,10 @@ export default function LoginPage() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = 'Enter a valid email address';
-    }
-    if (!form.password) {
+    if (!form.password)
       errs.password = 'Password is required';
-    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -121,7 +98,6 @@ export default function LoginPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     try {
       const { data } = await axios.post(
@@ -130,7 +106,6 @@ export default function LoginPage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      // Token save karo
       const token = data?.accessToken || data?.data?.token;
       if (token) {
         document.cookie = `accessToken=${token}; path=/; SameSite=Lax; max-age=86400`;
@@ -141,15 +116,11 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard');
       }
-
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string; errors?: Record<string, string> } } };
       const res = ax?.response?.data;
-      if (res?.errors) {
-        setErrors(res.errors);
-      } else {
-        setServerError(res?.message || 'Invalid email or password');
-      }
+      if (res?.errors) setErrors(res.errors);
+      else setServerError(res?.message || 'Invalid email or password');
       setLoading(false);
     }
   };
@@ -160,19 +131,11 @@ export default function LoginPage() {
   return (
     <>
       <style>{G}</style>
-
       <svg id="cur" viewBox="0 0 24 24" fill="none" style={{position:'fixed',pointerEvents:'none',zIndex:99999,width:14,height:14,top:0,left:0}}>
         <path d="M4 2L20 10.5L12.5 12.5L10 20L4 2Z" fill="#0f0e0c" stroke="#0f0e0c" strokeWidth="1" strokeLinejoin="round"/>
       </svg>
 
-      {/* Navigation */}
-      <nav className="login-nav" style={{
-        position:'fixed',top:0,left:0,right:0,zIndex:50,
-        display:'flex',alignItems:'center',justifyContent:'space-between',
-        padding:'18px 48px',
-        background:'rgba(250,249,247,.92)',backdropFilter:'blur(20px)',
-        borderBottom:'1px solid rgba(0,0,0,.06)',
-      }}>
+      <nav className="login-nav" style={{position:'fixed',top:0,left:0,right:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 48px',background:'rgba(250,249,247,.92)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(0,0,0,.06)'}}>
         <button onClick={() => router.push('/')} className="font-syne"
           style={{fontWeight:900,fontSize:'clamp(18px,2.5vw,22px)',display:'flex',alignItems:'center',gap:4,background:'none',border:'none',cursor:'pointer',color:'#0f0e0c',padding:0,fontFamily:'inherit'}}>
           timso
@@ -187,26 +150,16 @@ export default function LoginPage() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div style={{
-        minHeight:'100svh',display:'flex',alignItems:'center',justifyContent:'center',
-        background:'#faf9f7',
-        padding:'clamp(80px,12vw,100px) clamp(16px,4vw,24px) clamp(32px,5vw,48px)',
-      }}>
+      <div style={{minHeight:'100svh',display:'flex',alignItems:'center',justifyContent:'center',background:'#faf9f7',padding:'clamp(80px,12vw,100px) clamp(16px,4vw,24px) clamp(32px,5vw,48px)'}}>
         <div style={{width:'100%',maxWidth:'min(400px, 100%)'}}>
 
-          {/* Heading */}
           <div className="a-rise" style={{marginBottom:'clamp(24px,4vw,32px)'}}>
-            <h1 className="login-h1 font-syne font-black"
-              style={{fontSize:'clamp(28px,6vw,36px)',letterSpacing:'-2px',lineHeight:1.1,margin:'0 0 8px'}}>
+            <h1 className="login-h1 font-syne" style={{fontWeight:900,fontSize:'clamp(28px,6vw,36px)',letterSpacing:'-2px',lineHeight:1.1,margin:'0 0 8px'}}>
               Welcome back
             </h1>
-            <p style={{fontSize:'clamp(13px,2vw,15px)',color:'#6b6860',margin:0}}>
-              Sign in to your Timso account.
-            </p>
+            <p style={{fontSize:'clamp(13px,2vw,15px)',color:'#6b6860',margin:0}}>Sign in to your Timso account.</p>
           </div>
 
-          {/* Social Buttons */}
           <div className="a-rise" style={{animationDelay:'.05s',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:'clamp(16px,3vw,24px)'}}>
             <button className="social-btn">
               <svg width="18" height="18" viewBox="0 0 18 18">
@@ -225,14 +178,12 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Divider */}
           <div className="a-rise" style={{animationDelay:'.07s',display:'flex',alignItems:'center',gap:12,marginBottom:'clamp(16px,3vw,24px)'}}>
-            <div style={{flex:1,height:1,background:'rgba(0,0,0,.07)'}}></div>
+            <div style={{flex:1,height:1,background:'rgba(0,0,0,.07)'}}/>
             <span style={{fontSize:12,color:'#9e9b94',fontWeight:500,whiteSpace:'nowrap'}}>or continue with email</span>
-            <div style={{flex:1,height:1,background:'rgba(0,0,0,.07)'}}></div>
+            <div style={{flex:1,height:1,background:'rgba(0,0,0,.07)'}}/>
           </div>
 
-          {/* Error Banner */}
           {serverError && (
             <div className="shake" style={{marginBottom:16,display:'flex',alignItems:'center',gap:12,background:'#fff1f0',border:'1px solid #fca5a5',borderRadius:14,padding:'12px 16px'}}>
               <div style={{width:20,height:20,borderRadius:'50%',background:'#ef4444',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
@@ -242,28 +193,18 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={submit} className="a-rise" style={{animationDelay:'.1s',display:'flex',flexDirection:'column',gap:16}}>
             <div>
               <label style={{display:'block',fontSize:13,fontWeight:600,color:'#0f0e0c',marginBottom:6}}>Email address</label>
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={change}
-                placeholder="you@company.com"
-                className={`inp${errors.email ? ' err' : ''}`}
-              />
+              <input name="email" type="email" autoComplete="email" value={form.email} onChange={change}
+                placeholder="you@company.com" className={`inp${errors.email ? ' err' : ''}`}/>
               {errors.email && <p style={{margin:'4px 0 0',fontSize:12,color:'#ef4444'}}>{errors.email}</p>}
             </div>
 
             <div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
                 <label style={{fontSize:13,fontWeight:600,color:'#0f0e0c'}}>Password</label>
-                <button
-                  type="button"
-                  onClick={() => router.push('/forgot-password')}
+                <button type="button" onClick={() => router.push('/forgot-password')}
                   style={{fontSize:12,fontWeight:600,color:'#6b6860',background:'none',border:'none',cursor:'pointer',padding:0,fontFamily:'inherit',transition:'color .2s'}}
                   onMouseEnter={e=>e.currentTarget.style.color='#0f0e0c'}
                   onMouseLeave={e=>e.currentTarget.style.color='#6b6860'}>
@@ -271,19 +212,10 @@ export default function LoginPage() {
                 </button>
               </div>
               <div style={{position:'relative'}}>
-                <input
-                  name="password"
-                  type={showPass ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={form.password}
-                  onChange={change}
-                  placeholder="••••••••"
-                  className={`inp${errors.password ? ' err' : ''}`}
-                  style={{paddingRight:48}}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(p => !p)}
+                <input name="password" type={showPass ? 'text' : 'password'} autoComplete="current-password"
+                  value={form.password} onChange={change} placeholder="••••••••"
+                  className={`inp${errors.password ? ' err' : ''}`} style={{paddingRight:48}}/>
+                <button type="button" onClick={() => setShowPass(p => !p)}
                   style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',color:'#9e9b94',cursor:'pointer',padding:0,display:'flex'}}>
                   {showPass ? <EyeOn /> : <EyeOff />}
                 </button>
@@ -291,27 +223,16 @@ export default function LoginPage() {
               {errors.password && <p style={{margin:'4px 0 0',fontSize:12,color:'#ef4444'}}>{errors.password}</p>}
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-sub"
-              style={{marginTop:4}}
-            >
+            <button type="submit" disabled={loading} className="btn-sub" style={{marginTop:4}}>
               <span>
-                {loading ? (
-                  <><span className="spin-s"/>Signing in…</>
-                ) : (
-                  'Sign in →'
-                )}
+                {loading ? <><span className="spin-s"/>Signing in…</> : 'Sign in →'}
               </span>
             </button>
           </form>
 
-          {/* Sign up link */}
           <p className="a-rise" style={{animationDelay:'.13s',marginTop:'clamp(16px,3vw,24px)',textAlign:'center',fontSize:13,color:'#9e9b94'}}>
             New to Timso?{' '}
-            <button
-              onClick={() => router.push('/register')}
+            <button onClick={() => router.push('/register')}
               style={{fontSize:13,fontWeight:600,color:'#0f0e0c',background:'none',border:'none',cursor:'pointer',padding:0,fontFamily:'inherit',textDecoration:'underline'}}>
               Create a free account
             </button>
