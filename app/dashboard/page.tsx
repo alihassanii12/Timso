@@ -136,7 +136,11 @@ const timeAgo     = (d:string) => { try { const s=Math.floor((Date.now()-new Dat
 const Avatar = ({
   name, picture, size=36, bg, fontSize=11, apiBase='',
 }:{name?:string;picture?:string;size?:number;bg?:string;fontSize?:number;apiBase?:string}) => {
-  const src = picture ? (picture.startsWith('http') ? picture : `${apiBase}${picture}`) : null;
+  const src = picture
+  ? (picture.startsWith('data:') || picture.startsWith('http')
+      ? picture
+      : `${apiBase}${picture}`)
+  : null;
   const fallbackBg = bg || AVATAR_COLORS[Math.abs(String(name||'U').charCodeAt(0)||0) % AVATAR_COLORS.length];
   return (
     <div style={{
