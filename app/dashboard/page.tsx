@@ -1366,10 +1366,12 @@ export default function DashboardPage() {
 
   /* Logout */
   const logout = async()=>{
-    try{await axios.post(`${API}/api/auth/logout`,{},{withCredentials:true});}catch{}
-    document.cookie='auth_token=; path=/; max-age=0';
-    router.push('/login');
-  };
+  try{await axios.post(`${API}/api/auth/logout`,{},{withCredentials:true});}catch{}
+  document.cookie = 'accessToken=; path=/; max-age=0; SameSite=None; Secure';
+  document.cookie = 'refreshToken=; path=/; max-age=0; SameSite=None; Secure';
+  localStorage.removeItem('accessToken');
+  router.push('/login');
+};
 
   /* Derived data */
   const inOffice = team.filter(t=>t.status==='office').length;
