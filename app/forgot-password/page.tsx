@@ -58,7 +58,7 @@ body.cur-on-dark #cur-arrow path{fill:#fff!important;stroke:#fff!important}
 
 type Step = 1 | 2 | 3;
 // 🔥 YAHAN CHANGE KIYA - direct Vercel backend URL
-const BASE = 'https://timso-backend-n5w1.vercel.app';
+const BASE = 'https://timso-backend-n5w1.vercel.app' ;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
