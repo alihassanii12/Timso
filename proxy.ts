@@ -24,15 +24,15 @@ export function proxy(request: NextRequest) {
   const authRoutes = ['/login', '/register', '/forgot-password','/verify-email','/','/about'];
 
   // Open routes — sab access kar sakte hain
-  const openRoutes = ['/', '/about'];
+  // const openRoutes = ['/', '/about'];
 
   const isAuthRoute = authRoutes.includes(pathname);
-  const isOpenRoute = openRoutes.includes(pathname);
+  // const isOpenRoute = openRoutes.includes(pathname);
 
-  // Open routes — hamesha allow
-  if (isOpenRoute) {
-    return NextResponse.next();
-  }
+  // // Open routes — hamesha allow
+  // if (isOpenRoute) {
+  //   return NextResponse.next();
+  // }
 
   // Logged in user auth page pe — dashboard bhejo
   if (isLoggedIn && isAuthRoute) {
