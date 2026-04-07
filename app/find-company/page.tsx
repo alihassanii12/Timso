@@ -6,6 +6,15 @@ import axios from 'axios';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
+// Read access token from cookie and attach as Bearer header
+const authHeaders = () => {
+  const match = typeof document !== 'undefined'
+    ? document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/)
+    : null;
+  const token = match ? decodeURIComponent(match[1]) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box}
@@ -152,7 +161,7 @@ export default function FindCompanyPage() {
   }, []);
 
   useEffect(() => {
-    axios.get(`${API}/api/auth/me`, { withCredentials: true })
+    axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authHeaders() })
       .then(r => {
         const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
         if (u) {
@@ -167,7 +176,7 @@ export default function FindCompanyPage() {
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await axios.get(`${API}/api/companies`, { withCredentials: true });
+      const r = await axios.get(`${API}/api/companies`, { withCredentials: true, headers: authHeaders() });
       if (r.data?.success) setCompanies(r.data.companies);
     } catch {
       setCompanies([]);
@@ -178,7 +187,7 @@ export default function FindCompanyPage() {
 
   const fetchMyApplications = useCallback(async () => {
     try {
-      const r = await axios.get(`${API}/api/companies/my-applications`, { withCredentials: true });
+      const r = await axios.get(`${API}/api/companies/my-applications`, { withCredentials: true, headers: authHeaders() });
       if (r.data?.success) setMyApplications(r.data.applications || []);
     } catch {
       setMyApplications([]);
@@ -193,7 +202,7 @@ export default function FindCompanyPage() {
   const handleApply = async (companyId: number | string) => {
     setApplying(companyId);
     try {
-      const r = await axios.post(`${API}/api/companies/apply`, { companyId }, { withCredentials: true });
+      const r = await axios.post(`${API}/api/companies/apply`, { companyId }, { withCredentials: true, headers: authHeaders() });
       if (r.data?.success) {
         showToast('Application sent! Waiting for admin approval.');
         fetchMyApplications();

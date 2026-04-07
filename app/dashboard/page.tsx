@@ -7,7 +7,27 @@ import { SocketProvider, useSocket } from '../SocketProvider';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-/* ══ AUTO TOKEN REFRESH INTERCEPTOR ══ */
+/* ══ TOKEN HELPERS ══ */
+const getTokenFromCookie = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
+const setTokenCookie = (token: string) => {
+  if (typeof document === 'undefined') return;
+  document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; SameSite=None; Secure; max-age=${15 * 60}`;
+};
+
+/* ══ AXIOS INTERCEPTORS ══ */
+// Request: attach token as Bearer header
+axios.interceptors.request.use(config => {
+  const token = getTokenFromCookie();
+  if (token) config.headers['Authorization'] = `Bearer ${token}`;
+  config.withCredentials = true;
+  return config;
+});
+
 let isRefreshing = false;
 let failedQueue: { resolve: (v: unknown) => void; reject: (e: unknown) => void }[] = [];
 
@@ -29,7 +49,10 @@ axios.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
       try {
-        await axios.post(`${API}/api/auth/refresh-token`, {}, { withCredentials: true });
+        const r = await axios.post(`${API}/api/auth/refresh-token`, {}, { withCredentials: true });
+        // Store new access token from response body
+        const newToken = r.data?.accessToken;
+        if (newToken) setTokenCookie(newToken);
         processQueue(null);
         return axios(original);
       } catch (refreshErr) {

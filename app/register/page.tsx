@@ -229,13 +229,12 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.verce
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      // Token cookie mein save karo
+      // Store access token in cookie for Bearer header usage
       const token = data?.accessToken;
       if (token) {
-        document.cookie = `auth-token=${token}; path=/; SameSite=Lax`;
+        document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; SameSite=None; Secure; max-age=${15 * 60}`;
       }
 
-      // Backend requiresOtp: true bhejta hai → verify-email page
       if (data?.requiresOtp) {
         router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
       } else {

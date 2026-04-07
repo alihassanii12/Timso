@@ -106,6 +106,12 @@ export default function LoginPage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
+      // Store access token in cookie for Bearer header usage
+      const token = data?.accessToken;
+      if (token) {
+        document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; SameSite=None; Secure; max-age=${15 * 60}`;
+      }
+
       if (data?.requiresOtp) {
         router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
       } else if (data?.user?.role === 'admin' || data?.user?.company_id) {
