@@ -234,62 +234,85 @@ const G = `
 
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0}
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;transition:background .3s,color .3s}
 
 :root{
   --bg:#faf9f7;
   --bg2:#fff;
   --bg3:#f2f0eb;
   --sidebar:#fff;
-  --header:#fff;
+  --header:rgba(250,249,247,.8);
   --stat-size:36px;
   --card:#fff;
-  --card-border:rgba(0,0,0,.07);
+  --card-border:rgba(0,0,0,.06);
   --text:#0f0e0c;
   --text2:#6b6860;
   --text3:#9e9b94;
   --text4:#c8c5be;
-  --border:rgba(0,0,0,.07);
-  --border2:rgba(0,0,0,.1);
-  --hover:rgba(0,0,0,.05);
-  --hover2:rgba(0,0,0,.03);
+  --border:rgba(0,0,0,.06);
+  --border2:rgba(0,0,0,.08);
+  --hover:rgba(0,0,0,.04);
+  --hover2:rgba(0,0,0,.02);
   --input-bg:#fff;
   --pill-bg:#f8f7f4;
+  --accent:#f97316;
+  --accent-soft:rgba(249,115,22,.1);
+  --glass:rgba(255,255,255,.7);
 }
 body.dark{
-  --bg:#0f0e0c;
-  --bg2:#1a1916;
-  --bg3:#252320;
-  --sidebar:#111009;
-  --header:#111009;
-  --card:#1a1916;
-  --card-border:rgba(255,255,255,.07);
+  --bg:#090908;
+  --bg2:#111110;
+  --bg3:#1a1a18;
+  --sidebar:#0c0c0b;
+  --header:rgba(9,9,8,.8);
+  --card:#111110;
+  --card-border:rgba(255,255,255,.05);
   --text:#f0ede8;
   --text2:#a09d97;
   --text3:#7a7770;
   --text4:#4a4744;
-  --border:rgba(255,255,255,.07);
-  --border2:rgba(255,255,255,.1);
-  --hover:rgba(255,255,255,.06);
-  --hover2:rgba(255,255,255,.04);
-  --input-bg:#111009;
-  --pill-bg:#1e1c19;
-  border-color: rgba(255,255,255,.07) !important;
+  --border:rgba(255,255,255,.05);
+  --border2:rgba(255,255,255,.08);
+  --hover:rgba(255,255,255,.05);
+  --hover2:rgba(255,255,255,.03);
+  --input-bg:#0c0c0b;
+  --pill-bg:#151514;
+  --accent:#fb923c;
+  --accent-soft:rgba(251,146,60,.15);
+  --glass:rgba(12,12,11,.7);
 }
 
-body.dark .card { border-color: var(--card-border) !important; }
-body.dark .sidebar-wrap { border-right-color: var(--border) !important; }
-body.dark .header-pad { border-bottom-color: var(--border) !important; }
-body.dark .nav-item { border-color: transparent !important; }
-body.dark .quick-btn { border-color: var(--card-border) !important; }
-body.dark .inp { border-color: var(--border2) !important; }
-body.dark .btn-ghost { border-color: var(--border2) !important; }
-body.dark .status-badge { border: none !important; }
-body.dark [class*="border"] { border-color: rgba(255,255,255,.07) !important; }
-body.dark hr { border-color: rgba(255,255,255,.07) !important; }
-body.dark .tab-btn { border: none !important; }
-body.dark .st-pill { border-color: var(--border2) !important; }
-body.dark .ref-btn { border-color: var(--card-border) !important; }
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;transition:background .4s cubic-bezier(.16,1,.3,1),color .4s}
+
+.sidebar-wrap{width:260px;height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:all .4s cubic-bezier(.16,1,.3,1);z-index:100;flex-shrink:0}
+.header-pad{backdrop-filter:blur(12px);border-bottom:1px solid var(--border);z-index:90}
+
+.nav-item{transition:all .2s cubic-bezier(.16,1,.3,1);border-radius:14px;cursor:none;display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;padding:12px 16px;border:none;color:var(--text2);background:transparent;margin-bottom:4px}
+.nav-item:hover{background:var(--hover);color:var(--text);transform:translateX(4px)}
+.nav-item.active{background:var(--text);color:var(--bg)!important;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+.nav-item svg{width:18px;height:18px;stroke-width:2.2;transition:all .2s}
+.nav-item.active svg{stroke:var(--bg)!important}
+
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:24px;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+.card:hover{box-shadow:0 12px 40px rgba(0,0,0,.06);transform:translateY(-4px);border-color:var(--border2)}
+
+.stat-card{padding:24px;display:flex;flex-direction:column;gap:12px}
+.stat-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justifyContent:center;font-size:24px;background:var(--hover)}
+
+.greet-card{background:linear-gradient(135deg, var(--text) 0%, #2d2b28 100%);color:var(--bg);padding:40px;border-radius:32px;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.15)}
+.greet-card::after{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:var(--accent);border-radius:50%;filter:blur(80px);opacity:.2}
+
+.btn-primary{background:var(--text);color:var(--bg);border:none;border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.15);background:var(--accent)}
+.btn-primary:active{transform:translateY(0)}
+
+.btn-ghost{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1)}
+.btn-ghost:hover{background:var(--hover);border-color:var(--text)}
+
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
+.status-online{background:#22c55e;box-shadow:0 0 12px rgba(34,197,94,.4)}
+
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.float{animation:float 4s ease-in-out infinite}
 
 .av-wrap{position:relative;flex-shrink:0}
 .av-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:2px solid var(--card);z-index:2}
@@ -311,14 +334,6 @@ body.cm #cur{width:20px!important;height:20px!important}
 body.ch #cur{width:17px!important;height:17px!important;opacity:.7}
 body.ca #cur{width:10px!important;height:10px!important;opacity:.5}
 body.cd #cur path{fill:#fff!important;stroke:#fff!important}
-
-.nav-item{transition:all .18s;border-radius:12px;cursor:none;display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;padding:10px 12px;border:none}
-.nav-item:hover{background:var(--hover)}
-.nav-item.active{background:var(--text);color:var(--bg)!important}
-.nav-item.active svg{stroke:#fff!important}
-
-.card{background:var(--card);border:1px solid var(--card-border);border-radius:20px;transition:box-shadow .28s,transform .28s,background .3s,border-color .3s}
-.card:hover{box-shadow:0 8px 32px rgba(0,0,0,.08);transform:translateY(-2px)}
 
 .team-row{transition:background .18s;border-radius:14px;cursor:none}
 .team-row:hover{background:var(--hover2)}
@@ -342,14 +357,14 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 
 .toast{position:fixed;bottom:24px;right:24px;z-index:99998;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;animation:riseIn .35s cubic-bezier(.16,1,.3,1) forwards;box-shadow:0 8px 28px rgba(0,0,0,.14)}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justifyContent:'center';animation:overlayIn .2s ease;padding:16px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justifyContent:center;animation:overlayIn .2s ease;padding:16px}
 .sheet{background:var(--card);border-radius:24px;padding:32px;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.18);animation:sheetIn .3s cubic-bezier(.16,1,.3,1) forwards;margin:16px}
 
 .inp{width:100%;border:1.5px solid var(--border2);border-radius:12px;padding:10px 14px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border-color .18s,background .3s;background:var(--input-bg);box-sizing:border-box}
 .inp:focus{border-color:#f97316}
 
 .lbl{font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px}
-.st-pill{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--border2);cursor:none;font-size:11px;font-weight:700;font-family:'Outfit',sans-serif;transition:all .18s;background:transparent;flex:1;justify-content:center}
+.st-pill{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--border2);cursor:none;font-size:11px;font-weight:700;font-family:'Outfit',sans-serif;transition:all .18s;background:transparent;flex:1;justifyContent:center}
 
 .admin-badge{font-size:9px;font-weight:900;padding:2px 8px;border-radius:100px;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;white-space:nowrap}
 .ref-btn{border:1px solid var(--card-border);border-radius:10px;background:var(--card);cursor:none;padding:6px 12px;font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:6px;transition:all .18s}
@@ -358,13 +373,6 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .src{font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;letter-spacing:.06em;text-transform:uppercase}
 .src.live{background:rgba(34,197,94,.12);color:#16a34a}
 .src.mock{background:rgba(249,115,22,.12);color:#d45e00}
-
-.btn-primary{background:#0f0e0c;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:none;padding:11px 24px;transition:all .18s;font-family:'Outfit',sans-serif;display:inline-flex;align-items:center;gap:8px}
-.btn-primary:hover{background:#2d2b28}
-.btn-primary:disabled{opacity:.45}
-
-.btn-ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border2);border-radius:12px;font-size:13px;font-weight:700;cursor:none;padding:11px 24px;transition:all .18s;font-family:'Outfit',sans-serif}
-.btn-ghost:hover{border-color:var(--text);color:var(--text)}
 
 .btn-danger{background:rgba(239,68,68,.1);color:#ef4444;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:none;width:100%;padding:12px;transition:all .18s;font-family:'Outfit',sans-serif}
 .btn-danger:hover{background:rgba(239,68,68,.18)}
@@ -498,6 +506,26 @@ function SwapModal({onSubmit,onClose,loading,dark}:{onSubmit:(f:string,t:string,
   );
 }
 
+const NavIcon = ({ id }: { id: string }) => {
+  const item = NAV_ALL.find(n => n.id === id);
+  if (!item) return null;
+  return (
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+    </svg>
+  );
+};
+
+const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+    <div>
+      <h2 className="font-syne" style={{ fontSize: 28, fontWeight: 900, margin: 0, letterSpacing: '-1px' }}>{title}</h2>
+      {subtitle && <p style={{ fontSize: 14, color: 'var(--text3)', margin: '4px 0 0' }}>{subtitle}</p>}
+    </div>
+    {action && <div>{action}</div>}
+  </div>
+);
+
 function Dashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -539,7 +567,7 @@ function Dashboard() {
   const [refreshing,setRefreshing] = useState(false);
   const [teamSrc,setTeamSrc] = useState<'live'|'error'>('live');
 
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
 
   useEffect(() => {
     if (!socket) return;
@@ -691,69 +719,198 @@ function Dashboard() {
     <>
       <style>{G}</style>
       {toast && <Toast msg={toast.msg} type={toast.type}/>}
-      <div style={{display:'flex',height:'100vh',overflow:'hidden',background:dark?'#0f0e0c':'#faf9f7'}}>
+      <div style={{display:'flex',height:'100vh',overflow:'hidden',background:dark?'#090908':'#faf9f7'}}>
         <aside className={`sidebar-wrap ${mobileOpen?'open':''}`}>
-          <div style={{padding:24,fontSize:20,fontWeight:900}}>timso</div>
-          <nav style={{padding:12,flex:1}}>
+          <div style={{padding:'32px 24px',display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:32,height:32,background:dark?'#f0ede8':'#0f0e0c',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',color:dark?'#0f0e0c':'#fff',fontWeight:900,fontSize:18}}>T</div>
+            <div style={{fontSize:20,fontWeight:900,letterSpacing:'-0.5px'}}>timso</div>
+          </div>
+          
+          <nav style={{padding:'0 16px',flex:1}}>
+            <div style={{fontSize:11,fontWeight:800,color:'var(--text3)',padding:'0 16px 12px',letterSpacing:'0.05em',textTransform:'uppercase'}}>Menu</div>
             {NAV.map(item=>(
               <button key={item.id} onClick={()=>setActiveNav(item.id)} className={`nav-item ${activeNav===item.id?'active':''}`}>
+                <NavIcon id={item.id} />
                 {item.label}
               </button>
             ))}
           </nav>
-          <div style={{padding:12}}><button onClick={logout} className="logout-btn">Logout</button></div>
+
+          <div style={{padding:16,borderTop:`1px solid var(--border)`}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderRadius:16,background:'var(--hover2)',marginBottom:12}}>
+              <Avatar name={displayName} size={36} />
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName}</div>
+                <div style={{fontSize:11,color:'var(--text3)'}}>{isAdmin ? 'Admin' : 'Team Member'}</div>
+              </div>
+            </div>
+            <button onClick={logout} className="logout-btn" style={{width:'100%',textAlign:'left',padding:'10px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:10}}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              Logout
+            </button>
+          </div>
         </aside>
 
-        <main style={{flex:1,display:'flex',flexDirection:'column'}}>
-          <header className="header-pad" style={{height:64,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 32px',background:dark?'#111009':'#fff'}}>
-            <h1 style={{fontSize:18,fontWeight:900}}>{NAV.find(n=>n.id===activeNav)?.label}</h1>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <button onClick={()=>setDark(!dark)}>{dark?'Light':'Dark'}</button>
-              <div style={{fontWeight:700}}>{time}</div>
+        <main style={{flex:1,display:'flex',flexDirection:'column',position:'relative'}}>
+          <header className="header-pad" style={{height:72,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 40px',background:'var(--header)',position:'sticky',top:0}}>
+            <div style={{display:'flex',alignItems:'center',gap:16}}>
+              <h1 className="font-syne" style={{fontSize:20,fontWeight:900,margin:0}}>{NAV.find(n=>n.id===activeNav)?.label}</h1>
+              {isConnected && <div style={{display:'flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:100,background:'rgba(34,197,94,.1)',color:'#16a34a',fontSize:10,fontWeight:800}}><span className="status-dot status-online" style={{margin:0}}/> LIVE</div>}
+            </div>
+            
+            <div style={{display:'flex',alignItems:'center',gap:20}}>
+              <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:12,background:'var(--hover2)',fontSize:13,fontWeight:700}}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {time}
+              </div>
+              <button onClick={()=>setDark(!dark)} style={{width:40,height:40,borderRadius:12,border:`1px solid var(--border2)`,background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none',transition:'all .2s'}}>
+                {dark ? (
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
+                ) : (
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                )}
+              </button>
             </div>
           </header>
 
-          <div className="main-content-pad" style={{padding:32,flex:1,overflowY:'auto'}}>
+          <div className="main-content-pad" style={{padding:'40px',flex:1,overflowY:'auto'}}>
             {user && !user.company_id ? (
-              <div style={{maxWidth:600,margin:'40px auto'}}>
+              <div className="a-rise" style={{maxWidth:800,margin:'0 auto',paddingTop:20}}>
                 {user.role==='admin' ? (
-                  <div className="card" style={{padding:32,textAlign:'center'}}>
-                    <h2>Register Company</h2>
-                    <input className="inp" placeholder="Name" value={companyName} onChange={e=>setCompanyName(e.target.value)} style={{marginBottom:12}}/>
-                    <button className="btn-primary" onClick={handleRegisterCompany} disabled={isRegistering}>Register</button>
+                  <div className="card" style={{padding:60,textAlign:'center',background:dark?'#111110':'#fff'}}>
+                    <div className="float" style={{fontSize:64,marginBottom:32}}>🏢</div>
+                    <h2 className="font-syne" style={{fontSize:36,fontWeight:900,marginBottom:16,letterSpacing:'-1px'}}>Register Your Company</h2>
+                    <p style={{color:'var(--text3)',maxWidth:460,margin:'0 auto 40px',lineHeight:1.6}}>Create a workspace for your team to stay connected, manage tasks, and track attendance in real-time.</p>
+                    
+                    <div style={{maxWidth:400,margin:'0 auto',textAlign:'left'}}>
+                      <div style={{marginBottom:24}}>
+                        <label className="lbl">Company Name</label>
+                        <input className="inp" placeholder="e.g. Acme Industries" value={companyName} onChange={e=>setCompanyName(e.target.value)} />
+                      </div>
+                      <div style={{marginBottom:40}}>
+                        <label className="lbl">Description (Optional)</label>
+                        <textarea className="inp" placeholder="Tell us what you do..." value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} style={{height:100,resize:'none'}} />
+                      </div>
+                      <button className="btn-primary" style={{width:'100%',justifyContent:'center',height:56,fontSize:16}} onClick={handleRegisterCompany} disabled={isRegistering}>
+                        {isRegistering ? <span className="spin" /> : 'Create Workspace'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="card" style={{padding:32}}>
-                    <h2>Find Company</h2>
-                    {companies.map(c=>(
-                      <div key={c.id} style={{padding:12,borderBottom:'1px solid #eee',display:'flex',justifyContent:'space-between'}}>
-                        <span>{c.name}</span>
-                        <button onClick={()=>handleApplyCompany(c.id)}>Apply</button>
-                      </div>
-                    ))}
+                  <div className="card" style={{padding:60,background:dark?'#111110':'#fff'}}>
+                    <div style={{textAlign:'center',marginBottom:48}}>
+                      <div className="float" style={{fontSize:64,marginBottom:32}}>🔍</div>
+                      <h2 className="font-syne" style={{fontSize:36,fontWeight:900,marginBottom:16,letterSpacing:'-1px'}}>Find Your Workspace</h2>
+                      <p style={{color:'var(--text3)',maxWidth:460,margin:'0 auto',lineHeight:1.6}}>Search for your company and request to join. Once approved, you'll gain access to the team dashboard.</p>
+                    </div>
+
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))',gap:24}}>
+                      {companies.length === 0 ? (
+                        <div style={{gridColumn:'1/-1',padding:40,textAlign:'center',background:'var(--hover2)',borderRadius:24,border:`1px dashed var(--border2)`}}>
+                          <p style={{color:'var(--text3)',margin:0}}>No companies registered yet. Ask your admin to sign up!</p>
+                        </div>
+                      ) : (
+                        companies.map(c=>(
+                          <div key={c.id} className="card" style={{padding:32,display:'flex',flexDirection:'column',justifyContent:'space-between',minHeight:200}}>
+                            <div>
+                              <h3 className="font-syne" style={{fontSize:20,fontWeight:900,margin:'0 0 12px'}}>{c.name}</h3>
+                              <p style={{fontSize:14,color:'var(--text2)',margin:0,lineHeight:1.5}}>{c.description || 'No description available.'}</p>
+                            </div>
+                            <button className="btn-ghost" style={{marginTop:32,width:'100%'}} onClick={()=>handleApplyCompany(c.id)} disabled={isApplying}>
+                              {isApplying ? <span className="spin" /> : 'Request to Join'}
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div>
+              <div className="a-rise">
                 {activeNav==='overview' && (
-                  <div>
-                    {isAdmin && applications.length>0 && (
-                      <div className="card" style={{padding:20,marginBottom:20}}>
-                        <h3>Pending Applications</h3>
-                        {applications.map(app=>(
-                          <div key={app.id} style={{display:'flex',justifyContent:'space-between',padding:10}}>
-                            <span>{app.full_name||app.username}</span>
-                            <div>
-                              <button onClick={()=>handleApplication(app.id,'accepted')}>Accept</button>
-                              <button onClick={()=>handleApplication(app.id,'rejected')}>Reject</button>
+                  <div style={{display:'flex',flexDirection:'column',gap:40}}>
+                    {/* GREETING CARD */}
+                    <div className="greet-card">
+                      <div style={{position:'relative',zIndex:2}}>
+                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+                          <span style={{fontSize:12,fontWeight:900,letterSpacing:'0.1em',textTransform:'uppercase',background:'var(--accent)',color:'#fff',padding:'4px 12px',borderRadius:100}}>Welcome Back</span>
+                        </div>
+                        <h2 className="font-syne" style={{fontSize:'clamp(32px,5vw,48px)',fontWeight:900,margin:0,letterSpacing:'-2px',lineHeight:1}}>Good {greet()}, {displayName} 👋</h2>
+                        <p style={{fontSize:16,opacity:.7,marginTop:16,maxWidth:500}}>You have {applications.length} pending applications and {tasks.length} active tasks for today.</p>
+                        
+                        <div style={{display:'flex',gap:16,marginTop:32}}>
+                          <button className="btn-primary" style={{background:'#fff',color:'#0f0e0c'}} onClick={()=>setShowAttModal(true)}>
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            Update My Status
+                          </button>
+                          {isAdmin && (
+                            <button className="btn-ghost" style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.2)',color:'#fff'}}>
+                              Manage Team
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STATS GRID */}
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))',gap:24}}>
+                      <div className="card stat-card">
+                        <div className="stat-icon" style={{color:'#f97316',background:'rgba(249,115,22,.1)'}}>🏢</div>
+                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Team at Office</div>
+                        <div style={{fontSize:32,fontWeight:900}}>{team.filter(m=>m.status==='office').length} <span style={{fontSize:14,color:'var(--text4)'}}>members</span></div>
+                      </div>
+                      <div className="card stat-card">
+                        <div className="stat-icon" style={{color:'#3b82f6',background:'rgba(59,130,246,.1)'}}>🏠</div>
+                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Working Remote</div>
+                        <div style={{fontSize:32,fontWeight:900}}>{team.filter(m=>m.status==='remote').length} <span style={{fontSize:14,color:'var(--text4)'}}>members</span></div>
+                      </div>
+                      <div className="card stat-card">
+                        <div className="stat-icon" style={{color:'#ef4444',background:'rgba(239,68,68,.1)'}}>📝</div>
+                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Active Tasks</div>
+                        <div style={{fontSize:32,fontWeight:900}}>{tasks.length} <span style={{fontSize:14,color:'var(--text4)'}}>pending</span></div>
+                      </div>
+                    </div>
+
+                    {/* APPLICATIONS SECTION (IF ADMIN) */}
+                    {isAdmin && applications.length > 0 && (
+                      <div className="a-rise">
+                        <SectionHeader 
+                          title="Pending Applications" 
+                          subtitle={`${applications.length} members want to join your workspace`}
+                        />
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(360px, 1fr))',gap:20}}>
+                          {applications.map(app=>(
+                            <div key={app.id} className="card" style={{padding:24,display:'flex',alignItems:'center',gap:16}}>
+                              <Avatar name={app.full_name || app.username} size={48} />
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{app.full_name || app.username}</div>
+                                <div style={{fontSize:13,color:'var(--text3)'}}>{app.email}</div>
+                              </div>
+                              <div style={{display:'flex',gap:8}}>
+                                <button onClick={()=>handleApplication(app.id,'accepted')} style={{width:40,height:40,borderRadius:12,border:'none',background:'rgba(34,197,94,.1)',color:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none'}}>
+                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>
+                                </button>
+                                <button onClick={()=>handleApplication(app.id,'rejected')} style={{width:40,height:40,borderRadius:12,border:'none',background:'rgba(239,68,68,.1)',color:'#ef4444',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none'}}>
+                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     )}
-                    <h2>Good {greet()}, {displayName} 👋</h2>
-                    <button onClick={()=>setShowAttModal(true)}>Update Status</button>
+                  </div>
+                )}
+
+                {activeNav !== 'overview' && (
+                  <div className="a-rise" style={{ textAlign: 'center', padding: '100px 0' }}>
+                    <div style={{ fontSize: 64, marginBottom: 24 }}>🚧</div>
+                    <SectionHeader 
+                      title={`${NAV.find(n => n.id === activeNav)?.label} is coming soon`}
+                      subtitle="We are working hard to bring this feature to your workspace."
+                    />
+                    <button className="btn-primary" onClick={() => setActiveNav('overview')}>Back to Overview</button>
                   </div>
                 )}
               </div>
