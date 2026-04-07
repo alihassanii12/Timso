@@ -692,23 +692,10 @@ function Dashboard() {
   const [ldAct, setLdAct] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { socket, isConnected } = useSocket();
+  const { isConnected } = useSocket();
 
-  useEffect(() => {
-    if (!socket) return;
-    socket.on('new-application', (data: { user: { full_name?: string; username?: string } }) => {
-      showToast(`New application from ${data.user.full_name || data.user.username}`);
-      fetchApplications();
-    });
-    socket.on('application-update', (data: { companyName: string; status: string }) => {
-      showToast(`Your application to ${data.companyName} was ${data.status}!`);
-      axios.get(`${API}/api/auth/me`, { withCredentials: true }).then(r => {
-        const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-        if (u) setUser(u);
-      });
-    });
-    return () => { socket.off('new-application'); socket.off('application-update'); };
-  }, [socket]);
+  // Socket.io disabled on Vercel — real-time notifications not available
+  // useEffect(() => { ... socket.on ... }, [socket]);
 
   const isAdmin = user?.role === 'admin';
   const NAV = NAV_ALL.filter(n => !n.adminOnly || isAdmin);
