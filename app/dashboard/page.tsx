@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { SocketProvider, useSocket } from '../SocketProvider';
@@ -53,12 +53,6 @@ interface User {
   profile_picture?: string;
   company_id?: number | string;
 }
-interface Company {
-  id: number | string;
-  name: string;
-  description?: string;
-  admin_id: number | string;
-}
 interface Application {
   id: number | string;
   user_id: number | string;
@@ -72,7 +66,7 @@ interface TeamMember {
   id: number | string;
   full_name?: string; fullname?: string; name?: string; username?: string;
   email?: string; job_role?: string; role?: string;
-  status?: 'office'|'remote'|'away';
+  status?: 'office' | 'remote' | 'away';
   note?: string; where?: string; location?: string;
   since?: string; checkin_time?: string;
   avatar_color?: string; bg?: string;
@@ -86,16 +80,6 @@ interface ActivityItem {
   created_at?: string; time?: string;
   bg?: string; avatar_color?: string;
   profile_picture?: string;
-}
-interface SwapRequest {
-  id: number | string;
-  requester_id?: number | string;
-  requester_name?: string;
-  from_date: string; to_date: string;
-  reason?: string;
-  status?: 'pending'|'approved'|'declined';
-  created_at?: string;
-  avatar_color?: string; isOwn?: boolean;
 }
 interface Task {
   id: number | string;
@@ -112,176 +96,99 @@ interface Task {
   due_date?: string;
   created_at?: string;
 }
-interface TaskStats {
-  total: number; todo: number; in_progress: number; done: number;
-  high_priority_open: number; overdue: number;
-}
 interface AssignableUser {
   id: number | string; full_name?: string; username?: string; email?: string; role?: string;
 }
-interface AnalyticsData {
-  avg_office_days?: number; peak_day?: string; utilization_rate?: number;
-  daily?: {day:string;office:number;remote:number;away:number}[];
-}
-interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
+interface AttendanceRecord { status: 'office' | 'remote' | 'away'; note: string; since: string; }
 
 /* ══ NAV ══ */
 const NAV_ALL = [
-  { id:'overview',  label:'Overview',    adminOnly:false, icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { id:'team',      label:'Team',        adminOnly:false, icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-  { id:'tasks',     label:'Tasks',       adminOnly:false, icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-  { id:'analytics', label:'Analytics',   adminOnly:true,  icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { id:'manage',    label:'Manage Team', adminOnly:true,  icon:'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-  { id:'settings',  label:'Settings',    adminOnly:false, icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  { id: 'overview', label: 'Overview', adminOnly: false, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'team', label: 'Team', adminOnly: false, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { id: 'tasks', label: 'Tasks', adminOnly: false, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+  { id: 'findjob', label: 'Find Job', adminOnly: false, icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
+  { id: 'analytics', label: 'Analytics', adminOnly: true, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { id: 'manage', label: 'Manage Team', adminOnly: true, icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+  { id: 'settings', label: 'Settings', adminOnly: false, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ];
 
-const STATUS_CFG: Record<string,{label:string;color:string;bg:string;dot:string;icon:string}> = {
-  office: { label:'In Office', color:'#d45e00', bg:'rgba(249,115,22,.1)',  dot:'#f97316', icon:'🏢' },
-  remote: { label:'Remote',    color:'#4228cf', bg:'rgba(92,59,255,.1)',   dot:'#a89fff', icon:'🏠' },
-  away:   { label:'Away',      color:'#6b6860', bg:'rgba(0,0,0,.06)',      dot:'#c8c5be', icon:'🌴' },
-};
-
-const AVATAR_COLORS = ['#f97316','#a89fff','#fbbf24','#34d399','#fb7185','#60a5fa','#c084fc','#f43f5e','#38bdf8','#4ade80'];
+const AVATAR_COLORS = ['#f97316', '#a89fff', '#fbbf24', '#34d399', '#fb7185', '#60a5fa', '#c084fc', '#f43f5e', '#38bdf8', '#4ade80'];
 
 /* ══ HELPERS ══ */
-const getInitials = (name?:string) => (name||'U').split(' ').map((w:string)=>w[0]).join('').toUpperCase().slice(0,2);
-const getColor    = (id:number|string, fb?:string) => fb || AVATAR_COLORS[Number(id) % AVATAR_COLORS.length];
-const fmtDate     = (d:string) => { try { return new Date(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); } catch { return d; } };
-const timeAgo     = (d:string) => { try { const s=Math.floor((Date.now()-new Date(d).getTime())/1000); if(s<60)return`${s}s ago`; if(s<3600)return`${Math.floor(s/60)}m ago`; if(s<86400)return`${Math.floor(s/3600)}h ago`; return`${Math.floor(s/86400)}d ago`; } catch { return d; } };
+const getInitials = (name?: string) => (name || 'U').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+const getColor = (id: number | string, fb?: string) => fb || AVATAR_COLORS[Number(id) % AVATAR_COLORS.length];
+const timeAgo = (d: string) => { try { const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000); if (s < 60) return `${s}s ago`; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; return `${Math.floor(s / 86400)}d ago`; } catch { return d; } };
 
-/* Avatar component - Updated to always be circular with better image fit */
-const Avatar = ({
-  name, picture, size=36, bg, fontSize=11, apiBase='',
-}:{name?:string;picture?:string;size?:number;bg?:string;fontSize?:number;apiBase?:string}) => {
-  const src = picture
-  ? (picture.startsWith('data:') || picture.startsWith('http')
-      ? picture
-      : `${apiBase}${picture}`)
-  : null;
-  const fallbackBg = bg || AVATAR_COLORS[Math.abs(String(name||'U').charCodeAt(0)||0) % AVATAR_COLORS.length];
+const Avatar = ({ name, picture, size = 36, bg, fontSize = 11, apiBase = '' }: { name?: string; picture?: string; size?: number; bg?: string; fontSize?: number; apiBase?: string }) => {
+  const src = picture ? (picture.startsWith('data:') || picture.startsWith('http') ? picture : `${apiBase}${picture}`) : null;
+  const fallbackBg = bg || AVATAR_COLORS[Math.abs(String(name || 'U').charCodeAt(0) || 0) % AVATAR_COLORS.length];
   return (
-    <div style={{
-      width:size, 
-      height:size, 
-      borderRadius:'50%', /* Always circular */
-      flexShrink:0, 
-      overflow:'hidden', 
-      position:'relative',
-      background: fallbackBg,
-      display:'flex', 
-      alignItems:'center', 
-      justifyContent:'center',
-    }}>
-      {src && (
-        <img 
-          src={src} 
-          alt={name||'User'}
-          style={{
-            position:'absolute',
-            inset:0,
-            width:'100%',
-            height:'100%',
-            objectFit:'cover', /* Better image fit */
-            objectPosition:'center',
-          }}
-          onError={e=>{(e.target as HTMLImageElement).style.display='none'}}
-        />
-      )}
-      <span style={{
-        fontSize, 
-        fontWeight:900, 
-        color:'#fff', 
-        lineHeight:1, 
-        position:'relative', 
-        zIndex:src ? -1 : 0, /* Hide initials when image loads */
-      }}>
-        {getInitials(name)}
-      </span>
+    <div style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', position: 'relative', background: fallbackBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {src && <img src={src} alt={name || 'User'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+      <span style={{ fontSize, fontWeight: 900, color: '#fff', lineHeight: 1, position: 'relative', zIndex: src ? -1 : 0 }}>{getInitials(name)}</span>
     </div>
   );
 };
 
-const normaliseTeam = (raw:TeamMember[]):TeamMember[] => raw.map(m => ({
+const normaliseTeam = (raw: TeamMember[]): TeamMember[] => raw.map(m => ({
   ...m,
-  name:            m.full_name || m.fullname || m.name || m.username || 'Unknown',
-  where:           m.note || m.location || m.where || '—',
-  since:           m.checkin_time || m.since || '—',
-  bg:              getColor(m.id, m.avatar_color || m.bg),
-  status:          (m.status as 'office'|'remote'|'away') || 'away',
+  name: m.full_name || m.fullname || m.name || m.username || 'Unknown',
+  where: m.note || m.location || m.where || '—',
+  since: m.checkin_time || m.since || '—',
+  bg: getColor(m.id, m.avatar_color || m.bg),
+  status: (m.status as 'office' | 'remote' | 'away') || 'away',
   profile_picture: m.profile_picture || undefined,
 }));
 
-const normaliseActivity = (raw:ActivityItem[]):ActivityItem[] => raw.map((a,i) => ({
+const normaliseActivity = (raw: ActivityItem[]): ActivityItem[] => raw.map((a, i) => ({
   ...a,
-  name:            a.user_name || a.name || 'Someone',
-  time:            a.time || (a.created_at ? timeAgo(a.created_at) : ''),
-  bg:              getColor(i, a.avatar_color || a.bg),
-  icon:            a.icon || '📋',
+  name: a.user_name || a.name || 'Someone',
+  time: a.time || (a.created_at ? timeAgo(a.created_at) : ''),
+  bg: getColor(i, a.avatar_color || a.bg),
+  icon: a.icon || '📋',
   profile_picture: a.profile_picture || undefined,
 }));
 
 /* ══ ATTENDANCE localStorage ══ */
 const LS_KEY = 'timso_attendance';
-const getAtt = ():AttendanceRecord|null => { try { const v=localStorage.getItem(LS_KEY); return v?JSON.parse(v):null; } catch { return null; } };
-const saveAtt = (s:'office'|'remote'|'away', note:string):AttendanceRecord => {
-  const r:AttendanceRecord = { status:s, note, since:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) };
-  try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } catch {}
+const getAtt = (): AttendanceRecord | null => { try { const v = localStorage.getItem(LS_KEY); return v ? JSON.parse(v) : null; } catch { return null; } };
+const saveAtt = (s: 'office' | 'remote' | 'away', note: string): AttendanceRecord => {
+  const r: AttendanceRecord = { status: s, note, since: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(r)); } catch { }
   return r;
 };
 
+/* ══ MOCK JOB DATA ══ */
+const MOCK_JOBS = [
+  { id: 1, title: 'Senior Frontend Engineer', company: 'Stripe', location: 'Remote', type: 'Full-time', salary: '$140k–$180k', tags: ['React', 'TypeScript', 'Node.js'], logo: '💳', posted: '2d ago', featured: true },
+  { id: 2, title: 'Product Designer', company: 'Figma', location: 'San Francisco, CA', type: 'Full-time', salary: '$120k–$160k', tags: ['UI/UX', 'Figma', 'Prototyping'], logo: '🎨', posted: '1d ago', featured: true },
+  { id: 3, title: 'Backend Engineer', company: 'Linear', location: 'Remote', type: 'Full-time', salary: '$130k–$170k', tags: ['Go', 'PostgreSQL', 'AWS'], logo: '⚡', posted: '3d ago', featured: false },
+  { id: 4, title: 'Growth Marketing Manager', company: 'Notion', location: 'New York, NY', type: 'Full-time', salary: '$100k–$130k', tags: ['SEO', 'Analytics', 'B2B'], logo: '📝', posted: '5d ago', featured: false },
+  { id: 5, title: 'DevOps Engineer', company: 'Vercel', location: 'Remote', type: 'Contract', salary: '$90–$120/hr', tags: ['Kubernetes', 'CI/CD', 'Terraform'], logo: '▲', posted: '1h ago', featured: false },
+  { id: 6, title: 'iOS Engineer', company: 'Airbnb', location: 'Seattle, WA', type: 'Full-time', salary: '$150k–$200k', tags: ['Swift', 'SwiftUI', 'Objective-C'], logo: '🏠', posted: '4d ago', featured: false },
+];
+
+const JOB_FILTERS = ['All', 'Remote', 'Full-time', 'Contract', 'Engineering', 'Design'];
+
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap');
-
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0}
 
 :root{
-  --bg:#faf9f7;
-  --bg2:#fff;
-  --bg3:#f2f0eb;
-  --sidebar:#fff;
-  --header:rgba(250,249,247,.8);
-  --stat-size:36px;
-  --card:#fff;
-  --card-border:rgba(0,0,0,.06);
-  --text:#0f0e0c;
-  --text2:#6b6860;
-  --text3:#9e9b94;
-  --text4:#c8c5be;
-  --border:rgba(0,0,0,.06);
-  --border2:rgba(0,0,0,.08);
-  --hover:rgba(0,0,0,.04);
-  --hover2:rgba(0,0,0,.02);
-  --input-bg:#fff;
-  --pill-bg:#f8f7f4;
-  --accent:#f97316;
-  --accent-soft:rgba(249,115,22,.1);
-  --glass:rgba(255,255,255,.7);
+  --bg:#faf9f7;--bg2:#fff;--bg3:#f2f0eb;--sidebar:#fff;--header:rgba(250,249,247,.8);
+  --card:#fff;--card-border:rgba(0,0,0,.06);--text:#0f0e0c;--text2:#6b6860;--text3:#9e9b94;--text4:#c8c5be;
+  --border:rgba(0,0,0,.06);--border2:rgba(0,0,0,.08);--hover:rgba(0,0,0,.04);--hover2:rgba(0,0,0,.02);
+  --input-bg:#fff;--accent:#f97316;--accent-soft:rgba(249,115,22,.1);
 }
 body.dark{
-  --bg:#090908;
-  --bg2:#111110;
-  --bg3:#1a1a18;
-  --sidebar:#0c0c0b;
-  --header:rgba(9,9,8,.8);
-  --card:#111110;
-  --card-border:rgba(255,255,255,.05);
-  --text:#f0ede8;
-  --text2:#a09d97;
-  --text3:#7a7770;
-  --text4:#4a4744;
-  --border:rgba(255,255,255,.05);
-  --border2:rgba(255,255,255,.08);
-  --hover:rgba(255,255,255,.05);
-  --hover2:rgba(255,255,255,.03);
-  --input-bg:#0c0c0b;
-  --pill-bg:#151514;
-  --accent:#fb923c;
-  --accent-soft:rgba(251,146,60,.15);
-  --glass:rgba(12,12,11,.7);
+  --bg:#090908;--bg2:#111110;--bg3:#1a1a18;--sidebar:#0c0c0b;--header:rgba(9,9,8,.8);
+  --card:#111110;--card-border:rgba(255,255,255,.05);--text:#f0ede8;--text2:#a09d97;--text3:#7a7770;--text4:#4a4744;
+  --border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.08);--hover:rgba(255,255,255,.05);--hover2:rgba(255,255,255,.03);
+  --input-bg:#0c0c0b;--accent:#fb923c;--accent-soft:rgba(251,146,60,.15);
 }
 
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;transition:background .4s cubic-bezier(.16,1,.3,1),color .4s}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;transition:background .4s,color .4s}
 
 .sidebar-wrap{width:260px;height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:all .4s cubic-bezier(.16,1,.3,1);z-index:100;flex-shrink:0}
 .header-pad{backdrop-filter:blur(12px);border-bottom:1px solid var(--border);z-index:90}
@@ -296,16 +203,14 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);over
 .card:hover{box-shadow:0 12px 40px rgba(0,0,0,.06);transform:translateY(-4px);border-color:var(--border2)}
 
 .stat-card{padding:24px;display:flex;flex-direction:column;gap:12px}
-.stat-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justifyContent:center;font-size:24px;background:var(--hover)}
+.stat-icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--hover)}
 
 .greet-card{background:linear-gradient(135deg, var(--text) 0%, #2d2b28 100%);color:var(--bg);padding:40px;border-radius:32px;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.15)}
 .greet-card::after{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:var(--accent);border-radius:50%;filter:blur(80px);opacity:.2}
 
 .btn-primary{background:var(--text);color:var(--bg);border:none;border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.15);background:var(--accent)}
-.btn-primary:active{transform:translateY(0)}
-
-.btn-ghost{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1)}
+.btn-ghost{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);font-family:'Outfit',sans-serif}
 .btn-ghost:hover{background:var(--hover);border-color:var(--text)}
 
 .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
@@ -313,20 +218,14 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);over
 
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 .float{animation:float 4s ease-in-out infinite}
-
-.av-wrap{position:relative;flex-shrink:0}
-.av-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:2px solid var(--card);z-index:2}
-
 @keyframes riseIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
 @keyframes overlayIn{from{opacity:0}to{opacity:1}}
 @keyframes sheetIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 .a-rise{opacity:0;animation:riseIn .55s cubic-bezier(.16,1,.3,1) forwards}
-.a-slide{opacity:0;animation:slideIn .45s cubic-bezier(.16,1,.3,1) forwards}
 .live-dot{animation:pulse 2s ease-in-out infinite}
 
 #cur{position:fixed;top:0;left:0;width:14px;height:14px;pointer-events:none;z-index:99999;transition:width .15s,height .15s,opacity .15s}
@@ -337,171 +236,356 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 
 .team-row{transition:background .18s;border-radius:14px;cursor:none}
 .team-row:hover{background:var(--hover2)}
-
 .status-badge{border-radius:100px;font-size:11px;font-weight:700;padding:3px 10px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .act-item{transition:background .18s;border-radius:12px;cursor:none}
 .act-item:hover{background:var(--hover2)}
 
-.quick-btn{border:1.5px solid var(--card-border);border-radius:14px;background:var(--card);cursor:none;transition:all .18s;display:flex;align-items:center;gap:10px;padding:13px 15px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;color:var(--text);width:100%}
-.quick-btn:hover{border-color:#f97316;background:rgba(249,115,22,.05);transform:translateY(-2px)}
-
 .logout-btn{transition:all .18s;border-radius:12px;cursor:none}
 .logout-btn:hover{background:rgba(239,68,68,.08);color:#ef4444}
-
-.tab-btn{border-radius:10px;font-size:12px;font-weight:600;padding:6px 14px;cursor:none;border:none;transition:all .18s;font-family:'Outfit',sans-serif}
-.tab-btn.active{background:var(--text);color:var(--bg)}
-.tab-btn:not(.active):hover{background:var(--hover);color:var(--text)}
 
 .sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
 .spin{width:15px;height:15px;border:2px solid rgba(0,0,0,.1);border-top-color:#f97316;border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
 
 .toast{position:fixed;bottom:24px;right:24px;z-index:99998;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;animation:riseIn .35s cubic-bezier(.16,1,.3,1) forwards;box-shadow:0 8px 28px rgba(0,0,0,.14)}
 
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justifyContent:center;animation:overlayIn .2s ease;padding:16px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:center;justify-content:center;animation:overlayIn .2s ease;padding:16px}
 .sheet{background:var(--card);border-radius:24px;padding:32px;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.18);animation:sheetIn .3s cubic-bezier(.16,1,.3,1) forwards;margin:16px}
 
 .inp{width:100%;border:1.5px solid var(--border2);border-radius:12px;padding:10px 14px;font-size:13px;font-family:'Outfit',sans-serif;color:var(--text);outline:none;transition:border-color .18s,background .3s;background:var(--input-bg);box-sizing:border-box}
 .inp:focus{border-color:#f97316}
-
 .lbl{font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px}
-.st-pill{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:12px;border:1.5px solid var(--border2);cursor:none;font-size:11px;font-weight:700;font-family:'Outfit',sans-serif;transition:all .18s;background:transparent;flex:1;justifyContent:center}
 
 .admin-badge{font-size:9px;font-weight:900;padding:2px 8px;border-radius:100px;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;white-space:nowrap}
-.ref-btn{border:1px solid var(--card-border);border-radius:10px;background:var(--card);cursor:none;padding:6px 12px;font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:6px;transition:all .18s}
-.ref-btn:hover{border-color:#f97316;color:#f97316}
 
-.src{font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;letter-spacing:.06em;text-transform:uppercase}
-.src.live{background:rgba(34,197,94,.12);color:#16a34a}
-.src.mock{background:rgba(249,115,22,.12);color:#d45e00}
+/* ══ JOB BOARD STYLES ══ */
+.job-search-bar{display:flex;gap:12px;align-items:center;background:var(--card);border:1.5px solid var(--border2);border-radius:18px;padding:8px 8px 8px 20px;box-shadow:0 4px 20px rgba(0,0,0,.04);transition:border-color .2s,box-shadow .2s;margin-bottom:24px}
+.job-search-bar:focus-within{border-color:#f97316;box-shadow:0 4px 20px rgba(249,115,22,.1)}
+.job-search-inp{flex:1;border:none;outline:none;font-size:14px;font-family:'Outfit',sans-serif;color:var(--text);background:transparent}
+.job-search-inp::placeholder{color:var(--text4)}
 
-.btn-danger{background:rgba(239,68,68,.1);color:#ef4444;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:none;width:100%;padding:12px;transition:all .18s;font-family:'Outfit',sans-serif}
-.btn-danger:hover{background:rgba(239,68,68,.18)}
+.job-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
+.filter-chip{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:none;border:1.5px solid var(--border2);background:var(--card);color:var(--text2);font-family:'Outfit',sans-serif;transition:all .2s}
+.filter-chip:hover{border-color:var(--accent);color:var(--accent)}
+.filter-chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
-@media(max-width: 1024px){
-  .grid-stats{ grid-template-columns: repeat(2, 1fr) !important; }
-  .grid-main{ grid-template-columns: 1fr !important; }
-  .grid-team-cards{ grid-template-columns: repeat(2, 1fr) !important; }
-}
-@media(max-width: 768px){
-  .sidebar-wrap{ position: fixed !important; left: -260px; top: 0; bottom: 0; z-index: 200; }
-  .sidebar-wrap.open{ left: 0; }
-  .mob-menu-btn{ display: flex; }
-  .grid-stats{ grid-template-columns: 1fr !important; }
-}
+.jobs-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(360px, 1fr));gap:20px}
+
+.job-card{background:var(--card);border:1.5px solid var(--card-border);border-radius:24px;padding:28px;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;cursor:none}
+.job-card.featured{border-color:rgba(249,115,22,.25);background:linear-gradient(135deg, var(--card), rgba(249,115,22,.02))}
+.job-card:hover{border-color:rgba(249,115,22,.35);box-shadow:0 16px 48px rgba(249,115,22,.08);transform:translateY(-4px)}
+.job-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(249,115,22,.04),transparent);opacity:0;transition:opacity .3s}
+.job-card:hover::before{opacity:1}
+
+.job-logo{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--hover);margin-bottom:16px;flex-shrink:0;border:1.5px solid var(--border)}
+.featured-badge{position:absolute;top:20px;right:20px;font-size:9px;font-weight:900;padding:4px 10px;border-radius:100px;background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;letter-spacing:.06em;text-transform:uppercase}
+
+.job-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:900;margin:0 0 4px;color:var(--text);letter-spacing:-.3px}
+.job-company{font-size:13px;font-weight:700;color:var(--text3);margin:0 0 16px;display:flex;align-items:center;gap:8px}
+.job-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.job-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:var(--bg3);color:var(--text2)}
+.job-salary{font-size:13px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:6px}
+.job-salary-val{color:#16a34a}
+
+.job-apply-btn{width:100%;background:var(--text);color:var(--bg);border:none;border-radius:14px;padding:13px;font-size:13px;font-weight:700;cursor:none;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.job-apply-btn:hover{background:var(--accent);transform:translateY(-1px)}
+
+.job-stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.job-stat{background:var(--card);border:1px solid var(--card-border);border-radius:18px;padding:20px;text-align:center}
+.job-stat-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:900;color:var(--text);display:block}
+.job-stat-lbl{font-size:12px;font-weight:600;color:var(--text3);margin-top:4px}
+
+@media(max-width:1024px){.jobs-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.sidebar-wrap{position:fixed!important;left:-260px;top:0;bottom:0;z-index:200}.sidebar-wrap.open{left:0}}
 `;
 
 const SkCard = () => (
-  <div className="card" style={{padding:'20px 24px'}}>
-    <div className="sk" style={{height:11,width:'55%',marginBottom:14}}/>
-    <div className="sk" style={{height:34,width:'38%',marginBottom:8}}/>
-    <div className="sk" style={{height:9,width:'28%'}}/>
+  <div className="card" style={{ padding: '20px 24px' }}>
+    <div className="sk" style={{ height: 11, width: '55%', marginBottom: 14 }} />
+    <div className="sk" style={{ height: 34, width: '38%', marginBottom: 8 }} />
+    <div className="sk" style={{ height: 9, width: '28%' }} />
   </div>
 );
 
-const SkRow = () => (
-  <div style={{display:'flex',alignItems:'center',gap:12,padding:12}}>
-    <div className="sk" style={{width:36,height:36,borderRadius:'50%',flexShrink:0}}/>
-    <div style={{flex:1}}>
-      <div className="sk" style={{height:11,width:'48%',marginBottom:7}}/>
-      <div className="sk" style={{height:9,width:'32%'}}/>
+const Toast = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => (
+  <div className="toast" style={{ background: type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff' }}>
+    <span>{type === 'success' ? '✓' : '✕'}</span> {msg}
+  </div>
+);
+
+function AttendanceModal({ current, onSave, onClose, dark }: { current: AttendanceRecord; onSave: (s: 'office' | 'remote' | 'away', note: string) => void; onClose: () => void; dark: boolean }) {
+  const [status, setStatus] = useState<'office' | 'remote' | 'away'>(current.status);
+  const [note, setNote] = useState(current.note);
+  const STATUS_OPTIONS = [
+    { id: 'office', label: 'In Office', icon: '🏢', color: '#f97316' },
+    { id: 'remote', label: 'Remote', icon: '🏠', color: '#a89fff' },
+    { id: 'away', label: 'Away', icon: '🌴', color: '#9e9b94' },
+  ] as const;
+  return (
+    <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="sheet">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <h2 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 900, fontSize: 20, letterSpacing: '-.5px', margin: 0 }}>Update Status</h2>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,.08)', background: dark ? '#1e1c19' : '#f8f7f4', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+          {STATUS_OPTIONS.map(o => (
+            <button key={o.id} onClick={() => setStatus(o.id)} style={{ flex: 1, padding: '14px 8px', borderRadius: 14, border: `1.5px solid ${status === o.id ? o.color : 'rgba(0,0,0,.08)'}`, background: status === o.id ? `${o.color}15` : 'transparent', cursor: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, font: 'inherit', transition: 'all .2s' }}>
+              <span style={{ fontSize: 24 }}>{o.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: status === o.id ? o.color : 'var(--text3)' }}>{o.label}</span>
+            </button>
+          ))}
+        </div>
+        <label className="lbl">Note (optional)</label>
+        <input className="inp" style={{ marginBottom: 20 }} placeholder="e.g. Working from home today" value={note} onChange={e => setNote(e.target.value)} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-primary" onClick={() => { onSave(status, note); onClose() }} style={{ flex: 2, justifyContent: 'center' }}>Save Status</button>
+        </div>
+      </div>
     </div>
-    <div className="sk" style={{height:22,width:68,borderRadius:100}}/>
-  </div>
-);
+  );
+}
 
-const Toast = ({msg,type}:{msg:string;type:'success'|'error'}) => (
-  <div className="toast" style={{background:type==='success'?'#0f0e0c':'#ef4444',color:'#fff'}}>
-    <span>{type==='success'?'✓':'✕'}</span> {msg}
-  </div>
-);
-
-function TaskModal({ users, onSubmit, onClose, loading, dark }: {
+function TaskModal({ users, onSubmit, onClose, loading }: {
   users: AssignableUser[];
-  onSubmit: (d:{title:string;description:string;assigned_to:string;priority:string;due_date:string}) => void;
+  onSubmit: (d: { title: string; description: string; assigned_to: string; priority: string; due_date: string }) => void;
   onClose: () => void;
   loading: boolean;
-  dark: boolean;
 }) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
-  const today = new Date().toISOString().split('T')[0];
   const valid = title.trim() && assignedTo;
-
   return (
-    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="sheet" style={{maxWidth:520}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22}}>
-          <div>
-            <h2 className="font-syne" style={{fontWeight:900,fontSize:20,letterSpacing:'-0.5px',margin:0,color:dark?'#f0ede8':'#0f0e0c'}}>Assign Task</h2>
-          </div>
-          <button onClick={onClose} style={{width:32,height:32,borderRadius:'50%',border:'1px solid rgba(0,0,0,.08)',background:dark?'#1e1c19':'#f8f7f4',cursor:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+    <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="sheet" style={{ maxWidth: 520 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <h2 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 900, fontSize: 20, margin: 0 }}>Assign Task</h2>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,.08)', background: '#f8f7f4', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div style={{marginBottom:14}}>
+        <div style={{ marginBottom: 14 }}>
           <label className="lbl">Assign to *</label>
-          <select className="inp" value={assignedTo} onChange={e=>setAssignedTo(e.target.value)}>
+          <select className="inp" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
             <option value="">Select team member…</option>
-            {users.map(u=>(
-              <option key={u.id} value={String(u.id)}>{u.full_name||u.username}</option>
-            ))}
+            {users.map(u => <option key={u.id} value={String(u.id)}>{u.full_name || u.username}</option>)}
           </select>
         </div>
-        <div style={{marginBottom:14}}>
+        <div style={{ marginBottom: 14 }}>
           <label className="lbl">Task title *</label>
-          <input className="inp" value={title} onChange={e=>setTitle(e.target.value)}/>
+          <input className="inp" value={title} onChange={e => setTitle(e.target.value)} placeholder="What needs to be done?" />
         </div>
-        <div className="modal-actions" style={{display:'flex',gap:10}}>
-          <button className="btn-ghost" onClick={onClose} style={{flex:1}}>Cancel</button>
-          <button className="btn-primary" disabled={!valid||loading} onClick={()=>onSubmit({title,description:desc,assigned_to:assignedTo,priority,due_date:dueDate})} style={{flex:2,justifyContent:'center'}}>Assign Task</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AttendanceModal({current,onSave,onClose,dark}:{current:AttendanceRecord;onSave:(s:'office'|'remote'|'away',note:string)=>void;onClose:()=>void;dark:boolean}) {
-  const [status,setStatus] = useState<'office'|'remote'|'away'>(current.status);
-  const [note,setNote] = useState(current.note);
-  return (
-    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="sheet">
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22}}>
-          <div>
-            <h2 className="font-syne" style={{fontWeight:900,fontSize:20,letterSpacing:'-0.5px',margin:0,color:dark?'#f0ede8':'#0f0e0c'}}>Update Status</h2>
+        <div style={{ marginBottom: 20 }}>
+          <label className="lbl">Priority</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['low', 'medium', 'high'] as const).map(p => (
+              <button key={p} onClick={() => setPriority(p)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1.5px solid ${priority === p ? '#f97316' : 'rgba(0,0,0,.08)'}`, background: priority === p ? 'rgba(249,115,22,.1)' : 'transparent', cursor: 'none', font: '600 12px Outfit,sans-serif', color: priority === p ? '#f97316' : 'var(--text3)', textTransform: 'capitalize', transition: 'all .2s' }}>{p}</button>
+            ))}
           </div>
-          <button onClick={onClose} style={{width:32,height:32,borderRadius:'50%',border:'1px solid rgba(0,0,0,.08)',background:dark?'#1e1c19':'#f8f7f4',cursor:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-primary" disabled={!valid || loading} onClick={() => onSubmit({ title, description: desc, assigned_to: assignedTo, priority, due_date: dueDate })} style={{ flex: 2, justifyContent: 'center' }}>
+            {loading ? <span className="spin" /> : 'Assign Task'}
           </button>
         </div>
-        <div className="modal-actions" style={{display:'flex',gap:10}}>
-          <button className="btn-ghost" onClick={onClose} style={{flex:1}}>Cancel</button>
-          <button className="btn-primary" onClick={()=>{onSave(status,note);onClose()}} style={{flex:2,justifyContent:'center'}}>Save Status</button>
-        </div>
       </div>
     </div>
   );
 }
 
-function SwapModal({onSubmit,onClose,loading,dark}:{onSubmit:(f:string,t:string,r:string)=>void;onClose:()=>void;loading:boolean;dark:boolean}) {
-  const today=new Date().toISOString().split('T')[0];
-  const [from,setFrom]=useState('');const [to,setTo]=useState('');const [reason,setReason]=useState('');
-  const valid=from&&to&&from!==to;
+/* ══ FIND JOB SECTION ══ */
+function FindJobSection({ dark }: { dark: boolean }) {
+  const [jobSearch, setJobSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [savedJobs, setSavedJobs] = useState<number[]>([]);
+  const [appliedJobs, setAppliedJobs] = useState<number[]>([]);
+  const [showToast, setShowToastFn] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const toast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setShowToastFn({ msg, type });
+    setTimeout(() => setShowToastFn(null), 3000);
+  };
+
+  const filtered = MOCK_JOBS.filter(j => {
+    const matchSearch = !jobSearch || j.title.toLowerCase().includes(jobSearch.toLowerCase()) || j.company.toLowerCase().includes(jobSearch.toLowerCase()) || j.tags.some(t => t.toLowerCase().includes(jobSearch.toLowerCase()));
+    const matchFilter = activeFilter === 'All' || j.type === activeFilter || j.location.includes(activeFilter) || j.tags.includes(activeFilter);
+    return matchSearch && matchFilter;
+  });
+
+  const handleApply = (jobId: number, title: string) => {
+    if (appliedJobs.includes(jobId)) return;
+    setAppliedJobs(p => [...p, jobId]);
+    toast(`Applied to ${title}!`);
+  };
+
+  const handleSave = (jobId: number) => {
+    setSavedJobs(p => p.includes(jobId) ? p.filter(id => id !== jobId) : [...p, jobId]);
+  };
+
   return (
-    <div className="overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="sheet">
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:22}}>
-          <h2 className="font-syne" style={{fontWeight:900,fontSize:20,margin:0}}>Request Swap</h2>
-          <button onClick={onClose}>✕</button>
+    <div>
+      {showToast && (
+        <div className="toast" style={{ background: '#0f0e0c', color: '#fff' }}>
+          <span>✓</span> {showToast.msg}
         </div>
-        <div className="modal-actions" style={{display:'flex',gap:10}}>
-          <button className="btn-ghost" onClick={onClose} style={{flex:1}}>Cancel</button>
-          <button className="btn-primary" disabled={!valid||loading} onClick={()=>onSubmit(from,to,reason)} style={{flex:2,justifyContent:'center'}}>Submit</button>
+      )}
+
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div>
+            <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>Find Job</h2>
+            <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>Discover opportunities from top companies</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {savedJobs.length > 0 && (
+              <div style={{ padding: '6px 14px', borderRadius: 100, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>
+                {savedJobs.length} saved
+              </div>
+            )}
+            {appliedJobs.length > 0 && (
+              <div style={{ padding: '6px 14px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 12, fontWeight: 700 }}>
+                {appliedJobs.length} applied
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Stats Bar */}
+      <div className="job-stats-bar">
+        <div className="job-stat">
+          <span className="job-stat-num">{MOCK_JOBS.length}</span>
+          <div className="job-stat-lbl">Open Positions</div>
+        </div>
+        <div className="job-stat">
+          <span className="job-stat-num">{MOCK_JOBS.filter(j => j.location === 'Remote').length}</span>
+          <div className="job-stat-lbl">Remote Roles</div>
+        </div>
+        <div className="job-stat">
+          <span className="job-stat-num">{appliedJobs.length}</span>
+          <div className="job-stat-lbl">Applied</div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="job-search-bar">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text4)" strokeWidth="2.2">
+          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          className="job-search-inp"
+          placeholder="Search by title, company, or skill…"
+          value={jobSearch}
+          onChange={e => setJobSearch(e.target.value)}
+        />
+        {jobSearch && (
+          <button onClick={() => setJobSearch('')} style={{ background: 'none', border: 'none', cursor: 'none', color: 'var(--text4)', display: 'flex', padding: 4 }}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div className="job-filters">
+        {JOB_FILTERS.map(f => (
+          <button
+            key={f}
+            className={`filter-chip ${activeFilter === f ? 'active' : ''}`}
+            onClick={() => setActiveFilter(f)}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {/* Results count */}
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+        {filtered.length} {filtered.length === 1 ? 'position' : 'positions'} found
+      </div>
+
+      {/* Jobs Grid */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>No jobs found</h3>
+          <p style={{ color: 'var(--text3)', margin: 0, fontSize: 14 }}>Try adjusting your search or filters</p>
+        </div>
+      ) : (
+        <div className="jobs-grid">
+          {filtered.map((job, i) => {
+            const isApplied = appliedJobs.includes(job.id);
+            const isSaved = savedJobs.includes(job.id);
+            return (
+              <div key={job.id} className={`job-card a-rise ${job.featured ? 'featured' : ''}`} style={{ animationDelay: `${i * 0.07}s` }}>
+                {job.featured && <div className="featured-badge">⭐ Featured</div>}
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+                  <div className="job-logo">{job.logo}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 className="job-title">{job.title}</h3>
+                    <p className="job-company">
+                      {job.company}
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'var(--bg3)', color: 'var(--text3)' }}>{job.type}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="job-meta">
+                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    {job.location}
+                  </span>
+                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {job.posted}
+                  </span>
+                </div>
+
+                <div className="job-salary">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="job-salary-val">{job.salary}</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+                  {job.tags.map(t => (
+                    <span key={t} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 100, background: 'var(--accent-soft)', color: 'var(--accent)' }}>{t}</span>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleSave(job.id)}
+                    style={{ width: 44, height: 44, borderRadius: 12, border: `1.5px solid ${isSaved ? '#f97316' : 'var(--border2)'}`, background: isSaved ? 'rgba(249,115,22,.1)' : 'transparent', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}
+                  >
+                    <svg width="16" height="16" fill={isSaved ? '#f97316' : 'none'} viewBox="0 0 24 24" stroke={isSaved ? '#f97316' : 'var(--text3)'} strokeWidth="2">
+                      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </button>
+                  <button
+                    className="job-apply-btn"
+                    onClick={() => handleApply(job.id, job.title)}
+                    disabled={isApplied}
+                    style={isApplied ? { background: 'rgba(34,197,94,.1)', color: '#16a34a' } : {}}
+                  >
+                    {isApplied ? (
+                      <><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 13l4 4L19 7" /></svg> Applied</>
+                    ) : (
+                      <>Apply Now <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg></>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -509,17 +593,13 @@ function SwapModal({onSubmit,onClose,loading,dark}:{onSubmit:(f:string,t:string,
 const NavIcon = ({ id }: { id: string }) => {
   const item = NAV_ALL.find(n => n.id === id);
   if (!item) return null;
-  return (
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-    </svg>
-  );
+  return <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>;
 };
 
 const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
     <div>
-      <h2 className="font-syne" style={{ fontSize: 28, fontWeight: 900, margin: 0, letterSpacing: '-1px' }}>{title}</h2>
+      <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: 0, letterSpacing: '-1px' }}>{title}</h2>
       {subtitle && <p style={{ fontSize: 14, color: 'var(--text3)', margin: '4px 0 0' }}>{subtitle}</p>}
     </div>
     {action && <div>{action}</div>}
@@ -529,53 +609,37 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle?: 
 function Dashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [activeNav,setActiveNav] = useState('overview');
-  const [statusTab,setStatusTab] = useState<'all'|'office'|'remote'|'away'>('all');
-  const [time,setTime] = useState('');
+  const [activeNav, setActiveNav] = useState('overview');
+  const [time, setTime] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark,setDark] = useState<boolean>(false);
-  const [toast,setToast] = useState<{msg:string;type:'success'|'error'}|null>(null);
-  const [showAttModal,setShowAttModal] = useState(false);
-  const [showSwapModal,setShowSwapModal] = useState(false);
-  const [swapLoading,setSwapLoading] = useState(false);
-
-  const [user,setUser] = useState<User|null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const [team,setTeam] = useState<TeamMember[]>([]);
-  const [activity,setActivity] = useState<ActivityItem[]>([]);
-  const [swaps, setSwaps] = useState<SwapRequest[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskStats, setTaskStats] = useState<TaskStats|null>(null);
-  const [assignUsers, setAssignUsers] = useState<AssignableUser[]>([]);
-  const [ldTasks, setLdTasks] = useState(false);
+  const [dark, setDark] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [showAttModal, setShowAttModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
-  const [analytics, setAnalytics] = useState<AnalyticsData|null>(null);
-  const [myAtt,setMyAtt] = useState<AttendanceRecord>({status:'office',note:'',since:'—'});
+  const [taskLoading, setTaskLoading] = useState(false);
 
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [assignUsers, setAssignUsers] = useState<AssignableUser[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [isApplying, setIsApplying] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [companyName, setCompanyName] = useState('');
-  const [companyDesc, setCompanyDesc] = useState('');
+  const [myAtt, setMyAtt] = useState<AttendanceRecord>({ status: 'office', note: '', since: '—' });
 
-  const [ldUser,setLdUser] = useState(true);
-  const [ldTeam,setLdTeam] = useState(true);
-  const [ldAct,setLdAct] = useState(true);
-  const [ldSwaps,setLdSwaps] = useState(false);
-  const [ldAna,setLdAna] = useState(false);
-  const [refreshing,setRefreshing] = useState(false);
-  const [teamSrc,setTeamSrc] = useState<'live'|'error'>('live');
+  const [ldUser, setLdUser] = useState(true);
+  const [ldTeam, setLdTeam] = useState(true);
+  const [ldAct, setLdAct] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { socket, isConnected } = useSocket();
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('new-application', (data) => {
+    socket.on('new-application', (data: { user: { full_name?: string; username?: string } }) => {
       showToast(`New application from ${data.user.full_name || data.user.username}`);
       fetchApplications();
     });
-    socket.on('application-update', (data) => {
+    socket.on('application-update', (data: { companyName: string; status: string }) => {
       showToast(`Your application to ${data.companyName} was ${data.status}!`);
       axios.get(`${API}/api/auth/me`, { withCredentials: true }).then(r => {
         const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
@@ -588,333 +652,430 @@ function Dashboard() {
   const isAdmin = user?.role === 'admin';
   const NAV = NAV_ALL.filter(n => !n.adminOnly || isAdmin);
 
-  const showToast = (msg:string,type:'success'|'error'='success') => {
-    setToast({msg,type}); setTimeout(()=>setToast(null),3000);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
   };
 
   useEffect(() => { setMounted(true); }, []);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!mounted) return;
-    const tick=()=>setTime(new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}));
-    tick(); const t=setInterval(tick,1000); return()=>clearInterval(t);
-  },[mounted]);
+    const tick = () => setTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+    tick(); const t = setInterval(tick, 1000); return () => clearInterval(t);
+  }, [mounted]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!mounted) return;
     const saved = localStorage.getItem('timso_theme');
     const isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
     setDark(isDark);
-  },[mounted]);
+  }, [mounted]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (!mounted) return;
     document.body.classList.toggle('dark', dark);
     localStorage.setItem('timso_theme', dark ? 'dark' : 'light');
-  },[dark, mounted]);
+  }, [dark, mounted]);
 
-  useEffect(()=>{
+  // Custom cursor
+  useEffect(() => {
+    if (!mounted) return;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) return;
+    const cur = document.getElementById('cur') as HTMLElement;
+    if (!cur) return;
+    let mt: ReturnType<typeof setTimeout>;
+    const mv = (e: MouseEvent) => {
+      cur.style.left = (e.clientX - 2) + 'px';
+      cur.style.top = (e.clientY - 2) + 'px';
+      document.body.classList.add('cm'); clearTimeout(mt);
+      mt = setTimeout(() => document.body.classList.remove('cm'), 140);
+    };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mousedown', () => document.body.classList.add('ca'));
+    document.addEventListener('mouseup', () => document.body.classList.remove('ca'));
+    return () => document.removeEventListener('mousemove', mv);
+  }, [mounted]);
+
+  useEffect(() => {
     if (!mounted) return;
     setLdUser(true);
-    axios.get(`${API}/api/auth/me`,{withCredentials:true})
-      .then(r=>{
-        const d=r.data;
-        const u=d?.user||d?.data?.user||d?.data||d||null;
-        if(u)setUser(u);
+    axios.get(`${API}/api/auth/me`, { withCredentials: true })
+      .then(r => {
+        const d = r.data;
+        const u = d?.user || d?.data?.user || d?.data || d || null;
+        if (u) {
+          setUser(u);
+          // If user has no company, redirect to find-company page
+          if (!u.company_id && u.role !== 'admin') {
+            router.push('/findCompany');
+          }
+        }
       })
-      .finally(()=>setLdUser(false));
-  },[mounted]);
+      .catch(() => router.push('/login'))
+      .finally(() => setLdUser(false));
+  }, [mounted, router]);
 
-  const fetchTeam = useCallback(async(silent=false)=>{
+  // Load saved attendance
+  useEffect(() => {
     if (!mounted) return;
-    if(!silent)setLdTeam(true); else setRefreshing(true);
+    const saved = getAtt();
+    if (saved) setMyAtt(saved);
+  }, [mounted]);
+
+  const fetchTeam = useCallback(async (silent = false) => {
+    if (!mounted) return;
+    if (!silent) setLdTeam(true); else setRefreshing(true);
     try {
-      const r = await axios.get(`${API}/api/attendance/team`,{withCredentials:true});
+      const r = await axios.get(`${API}/api/attendance/team`, { withCredentials: true });
       const d = r.data?.data?.team || r.data?.team || r.data;
-      if(Array.isArray(d)) setTeam(normaliseTeam(d));
+      if (Array.isArray(d)) setTeam(normaliseTeam(d));
     } catch { setTeam([]); }
     finally { setLdTeam(false); setRefreshing(false); }
-  },[mounted]);
+  }, [mounted]);
 
-  const fetchActivity = useCallback(async()=>{
+  const fetchActivity = useCallback(async () => {
     if (!mounted) return;
     setLdAct(true);
     try {
-      const r = await axios.get(`${API}/api/activity`,{withCredentials:true});
+      const r = await axios.get(`${API}/api/activity`, { withCredentials: true });
       const d = r.data?.data || r.data;
-      if(Array.isArray(d)) setActivity(normaliseActivity(d.slice(0,15)));
+      if (Array.isArray(d)) setActivity(normaliseActivity(d.slice(0, 15)));
     } catch { setActivity([]); }
     finally { setLdAct(false); }
-  },[mounted]);
-
-  const fetchCompanies = useCallback(async () => {
-    try {
-      const r = await axios.get(`${API}/api/companies`, { withCredentials: true });
-      if (r.data?.success) setCompanies(r.data.companies);
-    } catch {}
-  }, []);
+  }, [mounted]);
 
   const fetchApplications = useCallback(async () => {
+    if (!user?.company_id) return;
     try {
       const r = await axios.get(`${API}/api/companies/applications`, { withCredentials: true });
       if (r.data?.success) setApplications(r.data.applications);
-    } catch {}
+    } catch { }
+  }, [user?.company_id]);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const r = await axios.get(`${API}/api/tasks`, { withCredentials: true });
+      const d = r.data?.data || r.data;
+      if (Array.isArray(d)) setTasks(d);
+    } catch { }
   }, []);
 
-  const handleRegisterCompany = async () => {
-    if (!companyName.trim()) return;
-    setIsRegistering(true);
-    try {
-      const r = await axios.post(`${API}/api/companies/register`, { name: companyName, description: companyDesc }, { withCredentials: true });
-      if (r.data?.success) { showToast('Company registered!'); setUser(prev => prev ? { ...prev, company_id: r.data.company.id } : prev); }
-    } catch (err: any) { showToast(err.response?.data?.message || 'Failed', 'error'); }
-    setIsRegistering(false);
+  useEffect(() => {
+    if (!mounted) return;
+    fetchTeam(); fetchActivity(); fetchTasks();
+  }, [fetchTeam, fetchActivity, fetchTasks, mounted]);
+
+  useEffect(() => {
+    if (isAdmin && user?.company_id) fetchApplications();
+  }, [isAdmin, user?.company_id, fetchApplications]);
+
+  const handleSaveAtt = async (status: 'office' | 'remote' | 'away', note: string) => {
+    const r = saveAtt(status, note);
+    setMyAtt(r);
+    try { await axios.post(`${API}/api/attendance`, { status, note }, { withCredentials: true }); fetchTeam(true); } catch { }
+    showToast('Status updated!');
   };
 
-  const handleApplyCompany = async (companyId: string | number) => {
-    setIsApplying(true);
+  const handleAssignTask = async (d: { title: string; description: string; assigned_to: string; priority: string; due_date: string }) => {
+    setTaskLoading(true);
     try {
-      const r = await axios.post(`${API}/api/companies/apply`, { companyId }, { withCredentials: true });
-      if (r.data?.success) showToast('Applied!');
-    } catch (err: any) { showToast(err.response?.data?.message || 'Failed', 'error'); }
-    setIsApplying(false);
+      await axios.post(`${API}/api/tasks`, d, { withCredentials: true });
+      showToast('Task assigned!'); setShowTaskModal(false); fetchTasks();
+    } catch { showToast('Failed to assign task', 'error'); }
+    finally { setTaskLoading(false); }
   };
 
-  const handleApplication = async (applicationId: string | number, status: 'accepted' | 'rejected') => {
+  const handleApplication = async (applicationId: number | string, status: 'accepted' | 'rejected') => {
     try {
       const r = await axios.post(`${API}/api/companies/handle-application`, { applicationId, status }, { withCredentials: true });
       if (r.data?.success) { showToast(`Application ${status}!`); fetchApplications(); fetchTeam(); }
-    } catch (err: any) { showToast('Failed', 'error'); }
+    } catch { showToast('Failed', 'error'); }
   };
 
-  useEffect(()=>{
-    if (!mounted) return;
-    fetchTeam(); fetchActivity();
-  },[fetchTeam,fetchActivity, mounted]);
-
-  useEffect(()=>{
-    if (!mounted) return;
-    if (user && !user.company_id) {
-      if (user.role === 'user') fetchCompanies();
-    } else if (user && user.company_id && isAdmin) {
-      fetchApplications();
-    }
-  }, [user, mounted, fetchCompanies, fetchApplications, isAdmin]);
-
-  const handleSaveAtt = async(status:'office'|'remote'|'away', note:string) => {
-    const r = saveAtt(status,note);
-    setMyAtt(r);
-    try { await axios.post(`${API}/api/attendance`,{status,note},{withCredentials:true}); fetchTeam(true); } catch {}
-  };
-
-  const logout = async()=>{
-    try{await axios.post(`${API}/api/auth/logout`,{},{withCredentials:true});}catch{}
+  const logout = async () => {
+    try { await axios.post(`${API}/api/auth/logout`, {}, { withCredentials: true }); } catch { }
     router.push('/login');
   };
 
-  const displayName = user?.full_name||user?.username||'Team';
-  const greet = () => { const h=new Date().getHours(); if(h<12)return'morning'; if(h<17)return'afternoon'; return'evening'; };
+  const displayName = user?.full_name || user?.fullname || user?.username || 'Team';
+  const greet = () => { const h = new Date().getHours(); if (h < 12) return 'morning'; if (h < 17) return 'afternoon'; return 'evening'; };
+
+  // Status color map
+  const STATUS_DOT: Record<string, string> = { office: '#f97316', remote: '#a89fff', away: '#c8c5be' };
+  const STATUS_LABEL: Record<string, string> = { office: 'In Office', remote: 'Remote', away: 'Away' };
+  const STATUS_BG: Record<string, string> = { office: 'rgba(249,115,22,.1)', remote: 'rgba(168,159,255,.1)', away: 'rgba(0,0,0,.06)' };
 
   return (
     <>
       <style>{G}</style>
-      {toast && <Toast msg={toast.msg} type={toast.type}/>}
-      <div style={{display:'flex',height:'100vh',overflow:'hidden',background:dark?'#090908':'#faf9f7'}}>
-        <aside className={`sidebar-wrap ${mobileOpen?'open':''}`}>
-          <div style={{padding:'32px 24px',display:'flex',alignItems:'center',gap:12}}>
-            <div style={{width:32,height:32,background:dark?'#f0ede8':'#0f0e0c',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',color:dark?'#0f0e0c':'#fff',fontWeight:900,fontSize:18}}>T</div>
-            <div style={{fontSize:20,fontWeight:900,letterSpacing:'-0.5px'}}>timso</div>
+      <svg id="cur" viewBox="0 0 24 24" fill="none" style={{ position: 'fixed', pointerEvents: 'none', zIndex: 99999, width: 14, height: 14, top: 0, left: 0 }}>
+        <path d="M4 2L20 10.5L12.5 12.5L10 20L4 2Z" fill={dark ? '#f0ede8' : '#0f0e0c'} stroke={dark ? '#f0ede8' : '#0f0e0c'} strokeWidth="1" strokeLinejoin="round" />
+      </svg>
+      {toast && <Toast msg={toast.msg} type={toast.type} />}
+      {showAttModal && <AttendanceModal current={myAtt} onSave={handleSaveAtt} onClose={() => setShowAttModal(false)} dark={dark} />}
+      {showTaskModal && isAdmin && <TaskModal users={assignUsers} onSubmit={handleAssignTask} onClose={() => setShowTaskModal(false)} loading={taskLoading} />}
+
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+        {/* SIDEBAR */}
+        <aside className={`sidebar-wrap ${mobileOpen ? 'open' : ''}`}>
+          <div style={{ padding: '32px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 32, height: 32, background: dark ? '#f0ede8' : '#0f0e0c', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: dark ? '#0f0e0c' : '#fff', fontWeight: 900, fontSize: 18 }}>T</div>
+            <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px' }}>timso</div>
           </div>
-          
-          <nav style={{padding:'0 16px',flex:1}}>
-            <div style={{fontSize:11,fontWeight:800,color:'var(--text3)',padding:'0 16px 12px',letterSpacing:'0.05em',textTransform:'uppercase'}}>Menu</div>
-            {NAV.map(item=>(
-              <button key={item.id} onClick={()=>setActiveNav(item.id)} className={`nav-item ${activeNav===item.id?'active':''}`}>
+
+          <nav style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text3)', padding: '0 16px 12px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Menu</div>
+            {NAV.map(item => (
+              <button key={item.id} onClick={() => setActiveNav(item.id)} className={`nav-item ${activeNav === item.id ? 'active' : ''}`}>
                 <NavIcon id={item.id} />
                 {item.label}
+                {item.id === 'findjob' && (
+                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, padding: '2px 7px', borderRadius: 100, background: 'linear-gradient(135deg,#f97316,#ef4444)', color: '#fff', letterSpacing: '.05em' }}>NEW</span>
+                )}
               </button>
             ))}
           </nav>
 
-          <div style={{padding:16,borderTop:`1px solid var(--border)`}}>
-            <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderRadius:16,background:'var(--hover2)',marginBottom:12}}>
-              <Avatar name={displayName} size={36} />
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:700,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{displayName}</div>
-                <div style={{fontSize:11,color:'var(--text3)'}}>{isAdmin ? 'Admin' : 'Team Member'}</div>
-              </div>
+          <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
+            {/* Current status indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: STATUS_BG[myAtt.status], marginBottom: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_DOT[myAtt.status], flexShrink: 0 }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: STATUS_DOT[myAtt.status] }}>{STATUS_LABEL[myAtt.status]}</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>since {myAtt.since}</span>
             </div>
-            <button onClick={logout} className="logout-btn" style={{width:'100%',textAlign:'left',padding:'10px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:10}}>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 16, background: 'var(--hover2)', marginBottom: 12 }}>
+              <Avatar name={displayName} picture={user?.profile_picture} size={36} bg={user?.avatar_color} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isAdmin ? 'Admin' : 'Team Member'}</div>
+              </div>
+              {isAdmin && <div className="admin-badge">Admin</div>}
+            </div>
+            <button onClick={logout} className="logout-btn" style={{ width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', color: 'var(--text2)', fontFamily: 'Outfit,sans-serif' }}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
               Logout
             </button>
           </div>
         </aside>
 
-        <main style={{flex:1,display:'flex',flexDirection:'column',position:'relative'}}>
-          <header className="header-pad" style={{height:72,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 40px',background:'var(--header)',position:'sticky',top:0}}>
-            <div style={{display:'flex',alignItems:'center',gap:16}}>
-              <h1 className="font-syne" style={{fontSize:20,fontWeight:900,margin:0}}>{NAV.find(n=>n.id===activeNav)?.label}</h1>
-              {isConnected && <div style={{display:'flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:100,background:'rgba(34,197,94,.1)',color:'#16a34a',fontSize:10,fontWeight:800}}><span className="status-dot status-online" style={{margin:0}}/> LIVE</div>}
+        {/* MAIN */}
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', minWidth: 0 }}>
+          <header className="header-pad" style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', background: 'var(--header)', position: 'sticky', top: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              {/* Mobile menu */}
+              <button onClick={() => setMobileOpen(p => !p)} style={{ display: 'none', width: 36, height: 36, borderRadius: 10, border: '1px solid var(--border2)', background: 'var(--bg2)', alignItems: 'center', justifyContent: 'center', cursor: 'none' }} className="mob-menu-btn">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </button>
+              <h1 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: 0 }}>{NAV.find(n => n.id === activeNav)?.label}</h1>
+              {isConnected && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 10, fontWeight: 800 }}>
+                  <span className="status-dot status-online" style={{ margin: 0 }} /> LIVE
+                </div>
+              )}
             </div>
-            
-            <div style={{display:'flex',alignItems:'center',gap:20}}>
-              <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',borderRadius:12,background:'var(--hover2)',fontSize:13,fontWeight:700}}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 12, background: 'var(--hover2)', fontSize: 13, fontWeight: 700 }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 {time}
               </div>
-              <button onClick={()=>setDark(!dark)} style={{width:40,height:40,borderRadius:12,border:`1px solid var(--border2)`,background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none',transition:'all .2s'}}>
+              <button onClick={() => setDark(!dark)} style={{ width: 40, height: 40, borderRadius: 12, border: '1px solid var(--border2)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none', transition: 'all .2s' }}>
                 {dark ? (
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z" /></svg>
                 ) : (
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
                 )}
               </button>
             </div>
           </header>
 
-          <div className="main-content-pad" style={{padding:'40px',flex:1,overflowY:'auto'}}>
-            {user && !user.company_id ? (
-              <div className="a-rise" style={{maxWidth:800,margin:'0 auto',paddingTop:20}}>
-                {user.role==='admin' ? (
-                  <div className="card" style={{padding:60,textAlign:'center',background:dark?'#111110':'#fff'}}>
-                    <div className="float" style={{fontSize:64,marginBottom:32}}>🏢</div>
-                    <h2 className="font-syne" style={{fontSize:36,fontWeight:900,marginBottom:16,letterSpacing:'-1px'}}>Register Your Company</h2>
-                    <p style={{color:'var(--text3)',maxWidth:460,margin:'0 auto 40px',lineHeight:1.6}}>Create a workspace for your team to stay connected, manage tasks, and track attendance in real-time.</p>
-                    
-                    <div style={{maxWidth:400,margin:'0 auto',textAlign:'left'}}>
-                      <div style={{marginBottom:24}}>
-                        <label className="lbl">Company Name</label>
-                        <input className="inp" placeholder="e.g. Acme Industries" value={companyName} onChange={e=>setCompanyName(e.target.value)} />
+          <div style={{ padding: '40px', flex: 1, overflowY: 'auto' }}>
+            <div className="a-rise">
+
+              {/* ── OVERVIEW ── */}
+              {activeNav === 'overview' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+                  {/* Greeting */}
+                  <div className="greet-card">
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                        <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'var(--accent)', color: '#fff', padding: '4px 12px', borderRadius: 100 }}>Welcome Back</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.5)' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
                       </div>
-                      <div style={{marginBottom:40}}>
-                        <label className="lbl">Description (Optional)</label>
-                        <textarea className="inp" placeholder="Tell us what you do..." value={companyDesc} onChange={e=>setCompanyDesc(e.target.value)} style={{height:100,resize:'none'}} />
+                      <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, margin: 0, letterSpacing: '-2px', lineHeight: 1 }}>
+                        Good {greet()}, {displayName} 👋
+                      </h2>
+                      <p style={{ fontSize: 15, opacity: .7, marginTop: 14, maxWidth: 480, lineHeight: 1.5 }}>
+                        {team.filter(m => m.status === 'office').length} members in office · {tasks.filter(t => t.status !== 'done').length} active tasks today
+                      </p>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 28, flexWrap: 'wrap' }}>
+                        <button className="btn-primary" style={{ background: '#fff', color: '#0f0e0c' }} onClick={() => setShowAttModal(true)}>
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          Update My Status
+                        </button>
+                        <button className="btn-primary" style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.2)' }} onClick={() => setActiveNav('findjob')}>
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                          Browse Jobs
+                        </button>
                       </div>
-                      <button className="btn-primary" style={{width:'100%',justifyContent:'center',height:56,fontSize:16}} onClick={handleRegisterCompany} disabled={isRegistering}>
-                        {isRegistering ? <span className="spin" /> : 'Create Workspace'}
-                      </button>
                     </div>
                   </div>
-                ) : (
-                  <div className="card" style={{padding:60,background:dark?'#111110':'#fff'}}>
-                    <div style={{textAlign:'center',marginBottom:48}}>
-                      <div className="float" style={{fontSize:64,marginBottom:32}}>🔍</div>
-                      <h2 className="font-syne" style={{fontSize:36,fontWeight:900,marginBottom:16,letterSpacing:'-1px'}}>Find Your Workspace</h2>
-                      <p style={{color:'var(--text3)',maxWidth:460,margin:'0 auto',lineHeight:1.6}}>Search for your company and request to join. Once approved, you'll gain access to the team dashboard.</p>
-                    </div>
 
-                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))',gap:24}}>
-                      {companies.length === 0 ? (
-                        <div style={{gridColumn:'1/-1',padding:40,textAlign:'center',background:'var(--hover2)',borderRadius:24,border:`1px dashed var(--border2)`}}>
-                          <p style={{color:'var(--text3)',margin:0}}>No companies registered yet. Ask your admin to sign up!</p>
-                        </div>
-                      ) : (
-                        companies.map(c=>(
-                          <div key={c.id} className="card" style={{padding:32,display:'flex',flexDirection:'column',justifyContent:'space-between',minHeight:200}}>
-                            <div>
-                              <h3 className="font-syne" style={{fontSize:20,fontWeight:900,margin:'0 0 12px'}}>{c.name}</h3>
-                              <p style={{fontSize:14,color:'var(--text2)',margin:0,lineHeight:1.5}}>{c.description || 'No description available.'}</p>
+                  {/* Stats */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
+                    {[
+                      { label: 'In Office', value: team.filter(m => m.status === 'office').length, unit: 'members', icon: '🏢', color: '#f97316', bg: 'rgba(249,115,22,.1)' },
+                      { label: 'Remote', value: team.filter(m => m.status === 'remote').length, unit: 'members', icon: '🏠', color: '#60a5fa', bg: 'rgba(96,165,250,.1)' },
+                      { label: 'Active Tasks', value: tasks.filter(t => t.status !== 'done').length, unit: 'open', icon: '📝', color: '#ef4444', bg: 'rgba(239,68,68,.1)' },
+                      { label: 'Done Today', value: tasks.filter(t => t.status === 'done').length, unit: 'tasks', icon: '✅', color: '#22c55e', bg: 'rgba(34,197,94,.1)' },
+                    ].map(s => (
+                      <div key={s.label} className="card stat-card">
+                        <div className="stat-icon" style={{ color: s.color, background: s.bg }}>{s.icon}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text3)' }}>{s.label}</div>
+                        <div style={{ fontSize: 30, fontWeight: 900 }}>{s.value} <span style={{ fontSize: 13, color: 'var(--text4)' }}>{s.unit}</span></div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Applications section (admin only) */}
+                  {isAdmin && applications.length > 0 && (
+                    <div>
+                      <SectionHeader title="Pending Applications" subtitle={`${applications.length} member${applications.length > 1 ? 's' : ''} want to join your workspace`} />
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                        {applications.map(app => (
+                          <div key={app.id} className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <Avatar name={app.full_name || app.username} size={44} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{app.full_name || app.username}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text3)' }}>{app.email}</div>
                             </div>
-                            <button className="btn-ghost" style={{marginTop:32,width:'100%'}} onClick={()=>handleApplyCompany(c.id)} disabled={isApplying}>
-                              {isApplying ? <span className="spin" /> : 'Request to Join'}
-                            </button>
+                            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                              <button onClick={() => handleApplication(app.id, 'accepted')} style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: 'rgba(34,197,94,.1)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none', transition: 'all .2s' }}>
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 13l4 4L19 7" /></svg>
+                              </button>
+                              <button onClick={() => handleApplication(app.id, 'rejected')} style={{ width: 36, height: 36, borderRadius: 10, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none', transition: 'all .2s' }}>
+                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            </div>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="a-rise">
-                {activeNav==='overview' && (
-                  <div style={{display:'flex',flexDirection:'column',gap:40}}>
-                    {/* GREETING CARD */}
-                    <div className="greet-card">
-                      <div style={{position:'relative',zIndex:2}}>
-                        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
-                          <span style={{fontSize:12,fontWeight:900,letterSpacing:'0.1em',textTransform:'uppercase',background:'var(--accent)',color:'#fff',padding:'4px 12px',borderRadius:100}}>Welcome Back</span>
-                        </div>
-                        <h2 className="font-syne" style={{fontSize:'clamp(32px,5vw,48px)',fontWeight:900,margin:0,letterSpacing:'-2px',lineHeight:1}}>Good {greet()}, {displayName} 👋</h2>
-                        <p style={{fontSize:16,opacity:.7,marginTop:16,maxWidth:500}}>You have {applications.length} pending applications and {tasks.length} active tasks for today.</p>
-                        
-                        <div style={{display:'flex',gap:16,marginTop:32}}>
-                          <button className="btn-primary" style={{background:'#fff',color:'#0f0e0c'}} onClick={()=>setShowAttModal(true)}>
-                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                            Update My Status
-                          </button>
-                          {isAdmin && (
-                            <button className="btn-ghost" style={{background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.2)',color:'#fff'}}>
-                              Manage Team
-                            </button>
-                          )}
-                        </div>
+                        ))}
                       </div>
                     </div>
+                  )}
 
-                    {/* STATS GRID */}
-                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))',gap:24}}>
-                      <div className="card stat-card">
-                        <div className="stat-icon" style={{color:'#f97316',background:'rgba(249,115,22,.1)'}}>🏢</div>
-                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Team at Office</div>
-                        <div style={{fontSize:32,fontWeight:900}}>{team.filter(m=>m.status==='office').length} <span style={{fontSize:14,color:'var(--text4)'}}>members</span></div>
-                      </div>
-                      <div className="card stat-card">
-                        <div className="stat-icon" style={{color:'#3b82f6',background:'rgba(59,130,246,.1)'}}>🏠</div>
-                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Working Remote</div>
-                        <div style={{fontSize:32,fontWeight:900}}>{team.filter(m=>m.status==='remote').length} <span style={{fontSize:14,color:'var(--text4)'}}>members</span></div>
-                      </div>
-                      <div className="card stat-card">
-                        <div className="stat-icon" style={{color:'#ef4444',background:'rgba(239,68,68,.1)'}}>📝</div>
-                        <div style={{fontSize:14,fontWeight:700,color:'var(--text3)'}}>Active Tasks</div>
-                        <div style={{fontSize:32,fontWeight:900}}>{tasks.length} <span style={{fontSize:14,color:'var(--text4)'}}>pending</span></div>
-                      </div>
-                    </div>
-
-                    {/* APPLICATIONS SECTION (IF ADMIN) */}
-                    {isAdmin && applications.length > 0 && (
-                      <div className="a-rise">
-                        <SectionHeader 
-                          title="Pending Applications" 
-                          subtitle={`${applications.length} members want to join your workspace`}
-                        />
-                        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(360px, 1fr))',gap:20}}>
-                          {applications.map(app=>(
-                            <div key={app.id} className="card" style={{padding:24,display:'flex',alignItems:'center',gap:16}}>
-                              <Avatar name={app.full_name || app.username} size={48} />
-                              <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{app.full_name || app.username}</div>
-                                <div style={{fontSize:13,color:'var(--text3)'}}>{app.email}</div>
-                              </div>
-                              <div style={{display:'flex',gap:8}}>
-                                <button onClick={()=>handleApplication(app.id,'accepted')} style={{width:40,height:40,borderRadius:12,border:'none',background:'rgba(34,197,94,.1)',color:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none'}}>
-                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>
-                                </button>
-                                <button onClick={()=>handleApplication(app.id,'rejected')} style={{width:40,height:40,borderRadius:12,border:'none',background:'rgba(239,68,68,.1)',color:'#ef4444',display:'flex',alignItems:'center',justifyContent:'center',cursor:'none'}}>
-                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                              </div>
+                  {/* Recent Activity */}
+                  {activity.length > 0 && (
+                    <div>
+                      <SectionHeader title="Recent Activity" subtitle="What's happening with your team" />
+                      <div className="card" style={{ padding: 8 }}>
+                        {activity.slice(0, 8).map(a => (
+                          <div key={a.id} className="act-item" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+                            <Avatar name={a.name} picture={a.profile_picture} size={36} bg={a.bg} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}><span style={{ fontWeight: 800 }}>{a.name}</span> {a.action}</div>
                             </div>
-                          ))}
-                        </div>
+                            <div style={{ fontSize: 11, color: 'var(--text4)', flexShrink: 0 }}>{a.time}</div>
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── TEAM ── */}
+              {activeNav === 'team' && (
+                <div>
+                  <SectionHeader title="Team" subtitle={`${team.length} members`} action={
+                    <button onClick={() => fetchTeam(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border2)', background: 'var(--card)', fontSize: 12, fontWeight: 700, cursor: 'none', color: 'var(--text2)', fontFamily: 'Outfit,sans-serif', transition: 'all .2s' }}>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" style={{ animation: refreshing ? 'spin .65s linear infinite' : 'none' }}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                      Refresh
+                    </button>
+                  } />
+                  <div className="card" style={{ overflow: 'hidden' }}>
+                    {ldTeam ? (
+                      [1, 2, 3].map(i => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                          <div className="sk" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}><div className="sk" style={{ height: 12, width: '40%', marginBottom: 8 }} /><div className="sk" style={{ height: 10, width: '25%' }} /></div>
+                          <div className="sk" style={{ height: 24, width: 80, borderRadius: 100 }} />
+                        </div>
+                      ))
+                    ) : team.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: 48, color: 'var(--text3)' }}>No team members yet</div>
+                    ) : (
+                      team.map(m => (
+                        <div key={m.id} className="team-row" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+                          <Avatar name={m.name} picture={m.profile_picture} size={40} bg={m.bg} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700 }}>{m.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{m.job_role || m.role || 'Team Member'}</div>
+                          </div>
+                          {m.where && m.where !== '—' && <div style={{ fontSize: 12, color: 'var(--text3)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.where}</div>}
+                          <div className="status-badge" style={{ background: { office: 'rgba(249,115,22,.1)', remote: 'rgba(168,159,255,.1)', away: 'rgba(0,0,0,.06)' }[m.status || 'away'], color: { office: '#d45e00', remote: '#4228cf', away: '#6b6860' }[m.status || 'away'] }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: { office: '#f97316', remote: '#a89fff', away: '#c8c5be' }[m.status || 'away'] }} />
+                            {STATUS_LABEL[m.status || 'away']}
+                          </div>
+                        </div>
+                      ))
                     )}
                   </div>
-                )}
+                </div>
+              )}
 
-                {activeNav !== 'overview' && (
-                  <div className="a-rise" style={{ textAlign: 'center', padding: '100px 0' }}>
-                    <div style={{ fontSize: 64, marginBottom: 24 }}>🚧</div>
-                    <SectionHeader 
-                      title={`${NAV.find(n => n.id === activeNav)?.label} is coming soon`}
-                      subtitle="We are working hard to bring this feature to your workspace."
-                    />
-                    <button className="btn-primary" onClick={() => setActiveNav('overview')}>Back to Overview</button>
-                  </div>
-                )}
-              </div>
-            )}
+              {/* ── TASKS ── */}
+              {activeNav === 'tasks' && (
+                <div>
+                  <SectionHeader title="Tasks" subtitle={`${tasks.filter(t => t.status !== 'done').length} open · ${tasks.filter(t => t.status === 'done').length} done`} action={
+                    isAdmin && <button className="btn-primary" onClick={() => setShowTaskModal(true)} style={{ padding: '10px 20px', fontSize: 13 }}>
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v16m8-8H4" /></svg>
+                      Assign Task
+                    </button>
+                  } />
+                  {tasks.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
+                      <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+                      <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>No tasks yet</h3>
+                      <p style={{ color: 'var(--text3)', margin: 0 }}>{isAdmin ? 'Assign your first task to a team member' : 'No tasks have been assigned to you yet'}</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {tasks.map(t => (
+                        <div key={t.id} className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', flexShrink: 0, background: { high: '#ef4444', medium: '#f97316', low: '#22c55e' }[t.priority] || '#9e9b94' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, textDecoration: t.status === 'done' ? 'line-through' : 'none', color: t.status === 'done' ? 'var(--text3)' : 'var(--text)' }}>{t.title}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text3)' }}>→ {t.assigned_to_name || 'Team member'}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: { todo: 'var(--bg3)', in_progress: 'rgba(249,115,22,.1)', done: 'rgba(34,197,94,.1)' }[t.status], color: { todo: 'var(--text3)', in_progress: '#d45e00', done: '#16a34a' }[t.status] }}>
+                              {t.status === 'in_progress' ? 'In Progress' : t.status === 'todo' ? 'To Do' : 'Done'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── FIND JOB ── */}
+              {activeNav === 'findjob' && <FindJobSection dark={dark} />}
+
+              {/* ── ANALYTICS / MANAGE / SETTINGS (admin stubs) ── */}
+              {(activeNav === 'analytics' || activeNav === 'manage' || activeNav === 'settings') && (
+                <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                  <div style={{ fontSize: 64, marginBottom: 24 }} className="float">🚧</div>
+                  <SectionHeader
+                    title={`${NAV.find(n => n.id === activeNav)?.label} coming soon`}
+                    subtitle="We're working hard to bring this to your workspace."
+                  />
+                  <button className="btn-primary" onClick={() => setActiveNav('overview')}>Back to Overview</button>
+                </div>
+              )}
+
+            </div>
           </div>
         </main>
       </div>
