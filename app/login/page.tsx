@@ -106,9 +106,10 @@ export default function LoginPage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      // Store access token in cookie for Bearer header usage
+      // Store access token in both localStorage and cookie
       const token = data?.accessToken;
       if (token) {
+        localStorage.setItem('timso_token', token);
         document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; SameSite=None; Secure; max-age=${15 * 60}`;
       }
 

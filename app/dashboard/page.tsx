@@ -14,15 +14,28 @@ const getTokenFromCookie = (): string | null => {
   return match ? decodeURIComponent(match[1]) : null;
 };
 
+const getToken = (): string | null => {
+  // Try localStorage first (more reliable cross-origin), fallback to cookie
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('timso_token') || getTokenFromCookie();
+};
+
 const setTokenCookie = (token: string) => {
   if (typeof document === 'undefined') return;
   document.cookie = `accessToken=${encodeURIComponent(token)}; path=/; SameSite=None; Secure; max-age=${15 * 60}`;
+  localStorage.setItem('timso_token', token);
+};
+
+const clearToken = () => {
+  if (typeof document === 'undefined') return;
+  document.cookie = 'accessToken=; path=/; max-age=0';
+  localStorage.removeItem('timso_token');
 };
 
 /* ══ AXIOS INTERCEPTORS ══ */
 // Request: attach token as Bearer header
 axios.interceptors.request.use(config => {
-  const token = getTokenFromCookie();
+  const token = getToken();
   if (token) config.headers['Authorization'] = `Bearer ${token}`;
   config.withCredentials = true;
   return config;
@@ -57,6 +70,7 @@ axios.interceptors.response.use(
         return axios(original);
       } catch (refreshErr) {
         processQueue(refreshErr);
+        clearToken();
         window.location.href = '/login';
         return Promise.reject(refreshErr);
       } finally {
@@ -851,6 +865,7 @@ function Dashboard() {
 
   const logout = async () => {
     try { await axios.post(`${API}/api/auth/logout`, {}, { withCredentials: true }); } catch { }
+    clearToken();
     router.push('/login');
   };
 

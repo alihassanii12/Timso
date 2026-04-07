@@ -6,12 +6,13 @@ import axios from 'axios';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-// Read access token from cookie and attach as Bearer header
+// Read access token from localStorage or cookie and attach as Bearer header
 const authHeaders = () => {
-  const match = typeof document !== 'undefined'
-    ? document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/)
-    : null;
-  const token = match ? decodeURIComponent(match[1]) : null;
+  const token = (typeof window !== 'undefined' ? localStorage.getItem('timso_token') : null)
+    || (() => {
+      const match = typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/) : null;
+      return match ? decodeURIComponent(match[1]) : null;
+    })();
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
