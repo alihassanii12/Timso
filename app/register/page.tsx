@@ -208,7 +208,7 @@ export default function RegisterPage() {
     else submit();
   };
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
   const submit = async () => {
     if (!selectedRole) return;
@@ -229,8 +229,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      // Token cookie mein save karo (data.data.token ya data.accessToken dono handle)
-      const token = data?.data?.token || data?.accessToken;
+      // Token cookie mein save karo
+      const token = data?.accessToken;
       if (token) {
         document.cookie = `auth-token=${token}; path=/; SameSite=Lax`;
       }

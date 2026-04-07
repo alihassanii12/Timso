@@ -106,11 +106,6 @@ export default function LoginPage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
 
-      const token = data?.accessToken || data?.data?.token;
-      if (token) {
-        document.cookie = `accessToken=${token}; path=/; SameSite=Lax; max-age=86400`;
-      }
-
       if (data?.requiresOtp) {
         router.push("/verify-email");
       } else {
