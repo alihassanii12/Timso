@@ -107,9 +107,11 @@ export default function LoginPage() {
       );
 
       if (data?.requiresOtp) {
-        router.push("/verify-email");
-      } else {
+        router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      } else if (data?.user?.role === 'admin' || data?.user?.company_id) {
         router.push('/dashboard');
+      } else {
+        router.push('/find-company');
       }
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string; errors?: Record<string, string> } } };

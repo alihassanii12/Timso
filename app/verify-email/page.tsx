@@ -178,7 +178,18 @@ function VerifyEmailContent() {
       }, { withCredentials: true });
 
       setSuccess(true);
-      setTimeout(() => router.push('/dashboard'), 1800);
+      // Check if user has a company, redirect accordingly
+      try {
+        const r = await axios.get(`${BASE}/api/auth/me`, { withCredentials: true });
+        const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
+        if (u?.role === 'admin' || u?.company_id) {
+          setTimeout(() => router.push('/dashboard'), 1800);
+        } else {
+          setTimeout(() => router.push('/find-company'), 1800);
+        }
+      } catch {
+        setTimeout(() => router.push('/dashboard'), 1800);
+      }
 
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string } } };

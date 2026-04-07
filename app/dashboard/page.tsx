@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { SocketProvider, useSocket } from '../SocketProvider';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
 /* ══ AUTO TOKEN REFRESH INTERCEPTOR ══ */
 let isRefreshing = false;
@@ -708,7 +708,7 @@ function Dashboard() {
           setUser(u);
           // If user has no company, redirect to find-company page
           if (!u.company_id && u.role !== 'admin') {
-            router.push('/findCompany');
+            router.push('/find-company');
           }
         }
       })
@@ -739,7 +739,7 @@ function Dashboard() {
     setLdAct(true);
     try {
       const r = await axios.get(`${API}/api/activity`, { withCredentials: true });
-      const d = r.data?.data || r.data;
+      const d = r.data?.data?.activity || r.data?.data || r.data;
       if (Array.isArray(d)) setActivity(normaliseActivity(d.slice(0, 15)));
     } catch { setActivity([]); }
     finally { setLdAct(false); }
@@ -756,15 +756,24 @@ function Dashboard() {
   const fetchTasks = useCallback(async () => {
     try {
       const r = await axios.get(`${API}/api/tasks`, { withCredentials: true });
-      const d = r.data?.data || r.data;
+      const d = r.data?.data?.tasks || r.data?.data || r.data;
       if (Array.isArray(d)) setTasks(d);
+    } catch { }
+  }, []);
+
+  const fetchAssignUsers = useCallback(async () => {
+    try {
+      const r = await axios.get(`${API}/api/tasks/users`, { withCredentials: true });
+      const d = r.data?.data?.users || r.data?.users || [];
+      setAssignUsers(d);
     } catch { }
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
     fetchTeam(); fetchActivity(); fetchTasks();
-  }, [fetchTeam, fetchActivity, fetchTasks, mounted]);
+    if (isAdmin) fetchAssignUsers();
+  }, [fetchTeam, fetchActivity, fetchTasks, fetchAssignUsers, mounted, isAdmin]);
 
   useEffect(() => {
     if (isAdmin && user?.company_id) fetchApplications();
@@ -1088,10 +1097,12 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
-    axios.get(`${API}/api/auth/me`, { withCredentials: true }).then(r => {
-      const u = r.data?.user || r.data?.data?.user || r.data;
-      if (u) setUser(u);
-    });
+    axios.get(`${API}/api/auth/me`, { withCredentials: true })
+      .then(r => {
+        const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
+        if (u?.id) setUser(u);
+      })
+      .catch(() => { window.location.href = '/login'; });
   }, []);
   if (!mounted) return null;
   return (
