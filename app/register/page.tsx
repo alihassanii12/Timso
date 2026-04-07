@@ -118,12 +118,20 @@ const ROLES: RoleDef[] = [
   },
 ];
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
-  const [form, setForm] = useState({ fullname: '', username: '', email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ 
+    fullname: '', 
+    username: '', 
+    email: '', 
+    password: '', 
+    confirmPassword: '',
+    companyName: '',
+    companyDescription: ''
+  });
   const [selectedRole, setSelectedRole] = useState<'admin' | 'user' | ''>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
@@ -183,8 +191,22 @@ export default function RegisterPage() {
     return Object.keys(errs).length === 0;
   };
 
+  const validateStep3 = () => {
+    const errs: Record<string, string> = {};
+    if (selectedRole === 'admin') {
+      if (!form.companyName.trim() || form.companyName.trim().length < 2) errs.companyName = 'Company name is required';
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const goStep2 = () => { if (validateStep1()) setStep(2); };
   const goStep3 = (e: FormEvent) => { e.preventDefault(); if (validateStep2()) setStep(3); };
+  const handleRoleContinue = () => {
+    if (!selectedRole) return;
+    if (selectedRole === 'admin') setStep(4);
+    else submit();
+  };
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -201,6 +223,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
           password:        form.password,
           confirmPassword: form.confirmPassword,
           role:            selectedRole,
+          companyName:     form.companyName,
+          companyDescription: form.companyDescription,
         },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
@@ -238,7 +262,9 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   })();
   const strLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][pwStr];
   const strColor = ['', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][pwStr];
-  const STEPS = ['Your details', 'Set password', 'Choose role'];
+  const STEPS = selectedRole === 'admin' 
+    ? ['Your details', 'Set password', 'Choose role', 'Company details']
+    : ['Your details', 'Set password', 'Choose role'];
   const selRoleDef = ROLES.find(r => r.id === selectedRole);
 
   const EyeOn = () => <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
@@ -302,7 +328,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
               const done = step > s;
               const active = step === s;
               return (
-                <div key={s} style={{display:'flex',alignItems:'center'}}>
+                <div key={label} style={{display:'flex',alignItems:'center'}}>
                   <div style={{display:'flex',alignItems:'center',gap:6}}>
                     <div className="prog" style={{
                       width:26,height:26,borderRadius:'50%',flexShrink:0,
@@ -318,7 +344,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
                       {label}
                     </span>
                   </div>
-                  {s < 3 && (
+                  {idx < STEPS.length - 1 && (
                     <div className="prog" style={{height:1,width:24,margin:'0 8px',flexShrink:0,background:step>s?'#0f0e0c':'rgba(0,0,0,.1)'}}/>
                   )}
                 </div>
@@ -543,24 +569,66 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
               <div style={{display:'flex',gap:10}}>
                 <BackBtn onClick={() => setStep(2)} />
-                <button onClick={submit} disabled={!selectedRole || loading} className="btn-sub" style={{flex:1}}>
+                <button onClick={handleRoleContinue} disabled={!selectedRole || loading} className="btn-sub" style={{flex:1}}>
                   <span>
                     {loading
                       ? <><span className="spin-s"/>Creating account…</>
-                      : selectedRole
-                        ? `Create account as ${selRoleDef?.name} →`
-                        : 'Select a role to continue'}
+                      : selectedRole === 'admin'
+                        ? 'Next: Company details →'
+                        : `Create account as ${selRoleDef?.name} →`}
                   </span>
                 </button>
+                </div>
+
+                <p style={{marginTop:12,fontSize:12,color:'#c8c5be',textAlign:'center'}}>
+                  Not sure?{' '}
+                  <button type="button" onClick={() => setSelectedRole('user')} style={{fontSize:12,fontWeight:700,color:'#9e9b94',background:'none',border:'none',cursor:'pointer',padding:0,textDecoration:'underline',fontFamily:'inherit'}}>
+                    Pick User
+                  </button>
+                  {' '}— you can always ask your admin to upgrade later.
+                </p>
+              </div>
+            )}
+
+          {/* ════ STEP 4 (Admin only) ════ */}
+          {step === 4 && (
+            <div className="a-rise" style={{animationDelay:'.08s'}}>
+              <div style={{marginBottom:'clamp(20px,4vw,28px)'}}>
+                <h1 className="rg-h1 font-syne font-black text-[#0f0e0c]"
+                  style={{fontSize:'clamp(26px,6vw,36px)',letterSpacing:'-2px',lineHeight:1.1,margin:'0 0 8px'}}>
+                  Your company details
+                </h1>
+                <p style={{fontSize:'clamp(13px,2vw,15px)',color:'#6b6860',margin:0,lineHeight:1.6}}>
+                  This information will be used to set up your workspace.
+                </p>
               </div>
 
-              <p style={{marginTop:12,fontSize:12,color:'#c8c5be',textAlign:'center'}}>
-                Not sure?{' '}
-                <button onClick={() => setSelectedRole('user')} style={{fontSize:12,fontWeight:700,color:'#9e9b94',background:'none',border:'none',cursor:'pointer',padding:0,textDecoration:'underline',fontFamily:'inherit'}}>
-                  Pick User
-                </button>
-                {' '}— you can always ask your admin to upgrade later.
-              </p>
+              <ErrorBanner />
+
+              <form onSubmit={e => { e.preventDefault(); if (validateStep3()) submit(); }} noValidate style={{display:'flex',flexDirection:'column',gap:14}}>
+                <div>
+                  <label style={{display:'block',fontSize:13,fontWeight:600,color:'#0f0e0c',marginBottom:6}}>Company Name</label>
+                  <input name="companyName" type="text" value={form.companyName} onChange={change}
+                    placeholder="Acme Corp" className={`inp${errors.companyName ? ' err' : ''}`}/>
+                  {errors.companyName && <p style={{margin:'4px 0 0',fontSize:12,color:'#ef4444'}}>{errors.companyName}</p>}
+                </div>
+                <div>
+                  <label style={{display:'block',fontSize:13,fontWeight:600,color:'#0f0e0c',marginBottom:6}}>Company Description (Optional)</label>
+                  <input name="companyDescription" type="text" value={form.companyDescription} onChange={change}
+                    placeholder="e.g. A technology company specializing in software." className="inp"/>
+                </div>
+
+                <div style={{display:'flex',gap:10,marginTop:4}}>
+                  <BackBtn onClick={() => setStep(3)} />
+                  <button type="submit" className="btn-sub" disabled={loading} style={{flex:1}}>
+                    <span>
+                      {loading
+                        ? <><span className="spin-s"/>Creating account…</>
+                        : 'Complete Registration →'}
+                    </span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>
