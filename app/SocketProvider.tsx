@@ -25,8 +25,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode; userId?: stri
     if (!userId) return;
 
     const newSocket = io(API, {
-      transports: ['websocket'],
+      transports: ['polling'],  // Vercel serverless: WebSocket not supported
       upgrade: false,
+      reconnectionAttempts: 3,
+      timeout: 5000,
+    });
+
+    newSocket.on('connect_error', () => {
+      // Silently fail on Vercel — real-time not available in serverless
+      newSocket.disconnect();
     });
 
     newSocket.on('connect', () => {
