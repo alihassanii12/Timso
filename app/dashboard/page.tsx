@@ -100,6 +100,32 @@ interface AssignableUser {
   id: number | string; full_name?: string; username?: string; email?: string; role?: string;
 }
 interface AttendanceRecord { status: 'office' | 'remote' | 'away'; note: string; since: string; }
+interface Job {
+  id: number | string;
+  title: string;
+  description?: string;
+  company_name: string;
+  location: string;
+  type: string;
+  salary?: string;
+  tags: string[];
+  posted_by_name?: string;
+  applicant_count?: number;
+  is_active: boolean;
+  created_at: string;
+}
+interface JobApplication {
+  id: number | string;
+  job_id: number | string;
+  job_title?: string;
+  company_name?: string;
+  location?: string;
+  type?: string;
+  salary?: string;
+  status: 'applied' | 'reviewing' | 'accepted' | 'rejected';
+  created_at: string;
+}
+interface PostJobForm { title: string; description: string; location: string; type: string; salary: string; tags: string; }
 
 /* ══ NAV ══ */
 const NAV_ALL = [
@@ -158,17 +184,8 @@ const saveAtt = (s: 'office' | 'remote' | 'away', note: string): AttendanceRecor
   return r;
 };
 
-/* ══ MOCK JOB DATA ══ */
-const MOCK_JOBS = [
-  { id: 1, title: 'Senior Frontend Engineer', company: 'Stripe', location: 'Remote', type: 'Full-time', salary: '$140k–$180k', tags: ['React', 'TypeScript', 'Node.js'], logo: '💳', posted: '2d ago', featured: true },
-  { id: 2, title: 'Product Designer', company: 'Figma', location: 'San Francisco, CA', type: 'Full-time', salary: '$120k–$160k', tags: ['UI/UX', 'Figma', 'Prototyping'], logo: '🎨', posted: '1d ago', featured: true },
-  { id: 3, title: 'Backend Engineer', company: 'Linear', location: 'Remote', type: 'Full-time', salary: '$130k–$170k', tags: ['Go', 'PostgreSQL', 'AWS'], logo: '⚡', posted: '3d ago', featured: false },
-  { id: 4, title: 'Growth Marketing Manager', company: 'Notion', location: 'New York, NY', type: 'Full-time', salary: '$100k–$130k', tags: ['SEO', 'Analytics', 'B2B'], logo: '📝', posted: '5d ago', featured: false },
-  { id: 5, title: 'DevOps Engineer', company: 'Vercel', location: 'Remote', type: 'Contract', salary: '$90–$120/hr', tags: ['Kubernetes', 'CI/CD', 'Terraform'], logo: '▲', posted: '1h ago', featured: false },
-  { id: 6, title: 'iOS Engineer', company: 'Airbnb', location: 'Seattle, WA', type: 'Full-time', salary: '$150k–$200k', tags: ['Swift', 'SwiftUI', 'Objective-C'], logo: '🏠', posted: '4d ago', featured: false },
-];
-
-const JOB_FILTERS = ['All', 'Remote', 'Full-time', 'Contract', 'Engineering', 'Design'];
+/* ══ MOCK JOB DATA — removed, now using real API ══ */
+const JOB_FILTERS = ['All', 'Remote', 'Full-time', 'Contract'];
 
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap');
@@ -400,187 +417,194 @@ function TaskModal({ users, onSubmit, onClose, loading }: {
 }
 
 /* ══ FIND JOB SECTION ══ */
-function FindJobSection({ dark }: { dark: boolean }) {
+function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [myApplications, setMyApplications] = useState<JobApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState<number | string | null>(null);
   const [jobSearch, setJobSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [savedJobs, setSavedJobs] = useState<number[]>([]);
-  const [appliedJobs, setAppliedJobs] = useState<number[]>([]);
-  const [showToast, setShowToastFn] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToastMsg] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [postForm, setPostForm] = useState<PostJobForm>({ title: '', description: '', location: 'Remote', type: 'Full-time', salary: '', tags: '' });
+  const [postLoading, setPostLoading] = useState(false);
 
-  const toast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setShowToastFn({ msg, type });
-    setTimeout(() => setShowToastFn(null), 3000);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastMsg({ msg, type }); setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const filtered = MOCK_JOBS.filter(j => {
-    const matchSearch = !jobSearch || j.title.toLowerCase().includes(jobSearch.toLowerCase()) || j.company.toLowerCase().includes(jobSearch.toLowerCase()) || j.tags.some(t => t.toLowerCase().includes(jobSearch.toLowerCase()));
-    const matchFilter = activeFilter === 'All' || j.type === activeFilter || j.location.includes(activeFilter) || j.tags.includes(activeFilter);
+  const fetchJobs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const endpoint = isAdmin ? `${API}/api/jobs/my-company` : `${API}/api/jobs`;
+      const r = await axios.get(endpoint, { withCredentials: true });
+      setJobs(r.data?.data?.jobs || []);
+    } catch { setJobs([]); }
+    finally { setLoading(false); }
+  }, [isAdmin]);
+
+  const fetchMyApplications = useCallback(async () => {
+    if (isAdmin) return;
+    try {
+      const r = await axios.get(`${API}/api/jobs/my-applications`, { withCredentials: true });
+      setMyApplications(r.data?.data?.applications || []);
+    } catch { setMyApplications([]); }
+  }, [isAdmin]);
+
+  useEffect(() => { fetchJobs(); fetchMyApplications(); }, [fetchJobs, fetchMyApplications]);
+
+  const handleApply = async (jobId: number | string, title: string) => {
+    setApplying(jobId);
+    try {
+      await axios.post(`${API}/api/jobs/${jobId}/apply`, {}, { withCredentials: true });
+      showToast(`Applied to "${title}"!`); fetchMyApplications();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      showToast(ax?.response?.data?.message || 'Failed to apply', 'error');
+    } finally { setApplying(null); }
+  };
+
+  const handleDeleteJob = async (jobId: number | string) => {
+    try {
+      await axios.delete(`${API}/api/jobs/${jobId}`, { withCredentials: true });
+      showToast('Job deleted'); fetchJobs();
+    } catch { showToast('Failed to delete', 'error'); }
+  };
+
+  const handlePostJob = async () => {
+    if (!postForm.title.trim()) return;
+    setPostLoading(true);
+    try {
+      await axios.post(`${API}/api/jobs`, { ...postForm }, { withCredentials: true });
+      showToast('Job posted!');
+      setShowPostModal(false);
+      setPostForm({ title: '', description: '', location: 'Remote', type: 'Full-time', salary: '', tags: '' });
+      fetchJobs();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      showToast(ax?.response?.data?.message || 'Failed to post job', 'error');
+    } finally { setPostLoading(false); }
+  };
+
+  const getAppStatus = (jobId: number | string) => myApplications.find(a => String(a.job_id) === String(jobId));
+
+  const filtered = jobs.filter(j => {
+    const q = jobSearch.toLowerCase();
+    const matchSearch = !q || j.title.toLowerCase().includes(q) || j.company_name.toLowerCase().includes(q) || (j.tags || []).some(t => t.toLowerCase().includes(q));
+    const matchFilter = activeFilter === 'All' || j.type === activeFilter || j.location.toLowerCase().includes(activeFilter.toLowerCase());
     return matchSearch && matchFilter;
   });
 
-  const handleApply = (jobId: number, title: string) => {
-    if (appliedJobs.includes(jobId)) return;
-    setAppliedJobs(p => [...p, jobId]);
-    toast(`Applied to ${title}!`);
-  };
-
-  const handleSave = (jobId: number) => {
-    setSavedJobs(p => p.includes(jobId) ? p.filter(id => id !== jobId) : [...p, jobId]);
-  };
+  const JOB_EMOJIS = ['💼', '🚀', '⚡', '🎯', '🔮', '🌿', '🏗️', '🎨', '📊', '🔧'];
+  const getEmoji = (id: number | string) => JOB_EMOJIS[Number(id) % JOB_EMOJIS.length];
 
   return (
     <div>
-      {showToast && (
-        <div className="toast" style={{ background: '#0f0e0c', color: '#fff' }}>
-          <span>✓</span> {showToast.msg}
+      {toast && <div className="toast" style={{ background: toast.type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff' }}><span>{toast.type === 'success' ? '✓' : '✕'}</span> {toast.msg}</div>}
+
+      {/* Post Job Modal (admin) */}
+      {showPostModal && (
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setShowPostModal(false) }}>
+          <div className="sheet" style={{ maxWidth: 540 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+              <h2 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 900, fontSize: 20, margin: 0 }}>Post a Job</h2>
+              <button onClick={() => setShowPostModal(false)} style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,.08)', background: dark ? '#1e1c19' : '#f8f7f4', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label className="lbl">Job Title *</label><input className="inp" value={postForm.title} onChange={e => setPostForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Senior Frontend Engineer" /></div>
+              <div><label className="lbl">Description</label><textarea className="inp" rows={3} value={postForm.description} onChange={e => setPostForm(p => ({ ...p, description: e.target.value }))} placeholder="What will this person do?" style={{ resize: 'vertical' }} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><label className="lbl">Location</label><input className="inp" value={postForm.location} onChange={e => setPostForm(p => ({ ...p, location: e.target.value }))} placeholder="Remote" /></div>
+                <div><label className="lbl">Type</label>
+                  <select className="inp" value={postForm.type} onChange={e => setPostForm(p => ({ ...p, type: e.target.value }))}>
+                    <option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option>
+                  </select>
+                </div>
+              </div>
+              <div><label className="lbl">Salary (optional)</label><input className="inp" value={postForm.salary} onChange={e => setPostForm(p => ({ ...p, salary: e.target.value }))} placeholder="e.g. $80k–$120k" /></div>
+              <div><label className="lbl">Tags (comma separated)</label><input className="inp" value={postForm.tags} onChange={e => setPostForm(p => ({ ...p, tags: e.target.value }))} placeholder="React, TypeScript, Node.js" /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button className="btn-ghost" onClick={() => setShowPostModal(false)} style={{ flex: 1 }}>Cancel</button>
+              <button className="btn-primary" disabled={!postForm.title.trim() || postLoading} onClick={handlePostJob} style={{ flex: 2, justifyContent: 'center' }}>
+                {postLoading ? <span className="spin" /> : 'Post Job'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div>
-            <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>Find Job</h2>
-            <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>Discover opportunities from top companies</p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {savedJobs.length > 0 && (
-              <div style={{ padding: '6px 14px', borderRadius: 100, background: 'var(--accent-soft)', color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>
-                {savedJobs.length} saved
-              </div>
-            )}
-            {appliedJobs.length > 0 && (
-              <div style={{ padding: '6px 14px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 12, fontWeight: 700 }}>
-                {appliedJobs.length} applied
-              </div>
-            )}
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div>
+          <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>{isAdmin ? 'Job Board' : 'Find Job'}</h2>
+          <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>{isAdmin ? 'Manage jobs posted by your company' : 'Discover opportunities from your company'}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {!isAdmin && myApplications.length > 0 && <div style={{ padding: '6px 14px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 12, fontWeight: 700 }}>{myApplications.length} applied</div>}
+          {isAdmin && <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ padding: '10px 20px', fontSize: 13 }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v16m8-8H4" /></svg>Post Job</button>}
         </div>
       </div>
 
-      {/* Stats Bar */}
+      {/* Stats */}
       <div className="job-stats-bar">
-        <div className="job-stat">
-          <span className="job-stat-num">{MOCK_JOBS.length}</span>
-          <div className="job-stat-lbl">Open Positions</div>
-        </div>
-        <div className="job-stat">
-          <span className="job-stat-num">{MOCK_JOBS.filter(j => j.location === 'Remote').length}</span>
-          <div className="job-stat-lbl">Remote Roles</div>
-        </div>
-        <div className="job-stat">
-          <span className="job-stat-num">{appliedJobs.length}</span>
-          <div className="job-stat-lbl">Applied</div>
-        </div>
+        <div className="job-stat"><span className="job-stat-num">{jobs.length}</span><div className="job-stat-lbl">Open Positions</div></div>
+        <div className="job-stat"><span className="job-stat-num">{jobs.filter(j => j.location === 'Remote').length}</span><div className="job-stat-lbl">Remote Roles</div></div>
+        <div className="job-stat"><span className="job-stat-num">{isAdmin ? jobs.reduce((s, j) => s + (j.applicant_count || 0), 0) : myApplications.length}</span><div className="job-stat-lbl">{isAdmin ? 'Total Applicants' : 'Applied'}</div></div>
       </div>
 
-      {/* Search */}
+      {/* Search + Filters */}
       <div className="job-search-bar">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text4)" strokeWidth="2.2">
-          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          className="job-search-inp"
-          placeholder="Search by title, company, or skill…"
-          value={jobSearch}
-          onChange={e => setJobSearch(e.target.value)}
-        />
-        {jobSearch && (
-          <button onClick={() => setJobSearch('')} style={{ background: 'none', border: 'none', cursor: 'none', color: 'var(--text4)', display: 'flex', padding: 4 }}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        )}
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text4)" strokeWidth="2.2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input className="job-search-inp" placeholder="Search by title, company, or skill…" value={jobSearch} onChange={e => setJobSearch(e.target.value)} />
+        {jobSearch && <button onClick={() => setJobSearch('')} style={{ background: 'none', border: 'none', cursor: 'none', color: 'var(--text4)', display: 'flex', padding: 4 }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg></button>}
       </div>
-
-      {/* Filters */}
       <div className="job-filters">
-        {JOB_FILTERS.map(f => (
-          <button
-            key={f}
-            className={`filter-chip ${activeFilter === f ? 'active' : ''}`}
-            onClick={() => setActiveFilter(f)}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      {/* Results count */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-        {filtered.length} {filtered.length === 1 ? 'position' : 'positions'} found
+        {JOB_FILTERS.map(f => <button key={f} className={`filter-chip ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</button>)}
       </div>
 
       {/* Jobs Grid */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="jobs-grid">{[1,2,3].map(i => <div key={i} className="job-card"><div className="sk" style={{ height: 52, width: 52, borderRadius: 16, marginBottom: 16 }} /><div className="sk" style={{ height: 20, width: '70%', marginBottom: 8 }} /><div className="sk" style={{ height: 14, width: '50%', marginBottom: 20 }} /><div className="sk" style={{ height: 44, borderRadius: 14 }} /></div>)}</div>
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>No jobs found</h3>
-          <p style={{ color: 'var(--text3)', margin: 0, fontSize: 14 }}>Try adjusting your search or filters</p>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💼</div>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>{isAdmin ? 'No jobs posted yet' : 'No jobs available'}</h3>
+          <p style={{ color: 'var(--text3)', margin: '0 0 20px', fontSize: 14 }}>{isAdmin ? 'Post your first job to start receiving applications.' : 'Check back later for new opportunities.'}</p>
+          {isAdmin && <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ margin: '0 auto' }}>Post First Job</button>}
         </div>
       ) : (
         <div className="jobs-grid">
           {filtered.map((job, i) => {
-            const isApplied = appliedJobs.includes(job.id);
-            const isSaved = savedJobs.includes(job.id);
+            const appStatus = getAppStatus(job.id);
+            const isApplied = !!appStatus;
             return (
-              <div key={job.id} className={`job-card a-rise ${job.featured ? 'featured' : ''}`} style={{ animationDelay: `${i * 0.07}s` }}>
-                {job.featured && <div className="featured-badge">⭐ Featured</div>}
-
+              <div key={job.id} className="job-card a-rise" style={{ animationDelay: `${i * 0.06}s` }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
-                  <div className="job-logo">{job.logo}</div>
+                  <div className="job-logo">{getEmoji(job.id)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h3 className="job-title">{job.title}</h3>
-                    <p className="job-company">
-                      {job.company}
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'var(--bg3)', color: 'var(--text3)' }}>{job.type}</span>
-                    </p>
+                    <p className="job-company">{job.company_name}<span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'var(--bg3)', color: 'var(--text3)' }}>{job.type}</span></p>
                   </div>
+                  {isAdmin && <button onClick={() => handleDeleteJob(job.id)} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none', flexShrink: 0 }}><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>}
                 </div>
-
                 <div className="job-meta">
-                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    {job.location}
-                  </span>
-                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    {job.posted}
-                  </span>
+                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>{job.location}</span>
+                  <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{timeAgo(job.created_at)}</span>
+                  {isAdmin && job.applicant_count !== undefined && <span className="job-tag" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>👥 {job.applicant_count} applicant{job.applicant_count !== 1 ? 's' : ''}</span>}
                 </div>
-
-                <div className="job-salary">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span className="job-salary-val">{job.salary}</span>
-                </div>
-
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
-                  {job.tags.map(t => (
-                    <span key={t} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 100, background: 'var(--accent-soft)', color: 'var(--accent)' }}>{t}</span>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => handleSave(job.id)}
-                    style={{ width: 44, height: 44, borderRadius: 12, border: `1.5px solid ${isSaved ? '#f97316' : 'var(--border2)'}`, background: isSaved ? 'rgba(249,115,22,.1)' : 'transparent', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}
-                  >
-                    <svg width="16" height="16" fill={isSaved ? '#f97316' : 'none'} viewBox="0 0 24 24" stroke={isSaved ? '#f97316' : 'var(--text3)'} strokeWidth="2">
-                      <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
+                {job.salary && <div className="job-salary"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span className="job-salary-val">{job.salary}</span></div>}
+                {job.tags && job.tags.length > 0 && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>{job.tags.map(t => <span key={t} style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 100, background: 'var(--accent-soft)', color: 'var(--accent)' }}>{t}</span>)}</div>}
+                {!isAdmin && (
+                  <button className="job-apply-btn" onClick={() => handleApply(job.id, job.title)} disabled={isApplied || applying === job.id}
+                    style={isApplied ? { background: appStatus?.status === 'accepted' ? 'rgba(34,197,94,.1)' : 'rgba(249,115,22,.1)', color: appStatus?.status === 'accepted' ? '#16a34a' : '#d45e00' } : {}}>
+                    {applying === job.id ? <span className="spin" /> :
+                     isApplied ? <><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 13l4 4L19 7" /></svg>{appStatus?.status === 'accepted' ? 'Accepted!' : appStatus?.status === 'rejected' ? 'Not selected' : 'Applied'}</> :
+                     <>Apply Now <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg></>}
                   </button>
-                  <button
-                    className="job-apply-btn"
-                    onClick={() => handleApply(job.id, job.title)}
-                    disabled={isApplied}
-                    style={isApplied ? { background: 'rgba(34,197,94,.1)', color: '#16a34a' } : {}}
-                  >
-                    {isApplied ? (
-                      <><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 13l4 4L19 7" /></svg> Applied</>
-                    ) : (
-                      <>Apply Now <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg></>
-                    )}
-                  </button>
-                </div>
+                )}
               </div>
             );
           })}
@@ -1070,7 +1094,7 @@ function Dashboard() {
               )}
 
               {/* ── FIND JOB ── */}
-              {activeNav === 'findjob' && <FindJobSection dark={dark} />}
+              {activeNav === 'findjob' && <FindJobSection isAdmin={isAdmin} dark={dark} />}
 
               {/* ── ANALYTICS / MANAGE / SETTINGS (admin stubs) ── */}
               {(activeNav === 'analytics' || activeNav === 'manage' || activeNav === 'settings') && (
