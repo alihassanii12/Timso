@@ -99,9 +99,9 @@ const ROLES: RoleDef[] = [
   {
     id: 'admin',
     name: 'Admin',
-    tagline: 'Full control over the workspace — manage team, approve swaps, view analytics.',
-    icon: '👑',
-    features: ['Approve & decline day swaps','View team analytics','Manage all users & roles','Access all settings'],
+    tagline: 'Register your company and manage your team from a central dashboard.',
+    icon: '🏢',
+    features: ['Company Registration','Approve & decline day swaps','View team analytics','Manage all users & roles'],
     accent: '#f97316',
     accentSoft: 'rgba(249,115,22,.1)',
     blobColor: '#f97316',
@@ -109,9 +109,9 @@ const ROLES: RoleDef[] = [
   {
     id: 'user',
     name: 'User',
-    tagline: 'Update your status, request day swaps and stay connected with your team.',
+    tagline: 'Search for your company, apply to join, and stay connected with your team.',
     icon: '🙋',
-    features: ['Update daily attendance','Submit day swap requests','View team board','Track your own requests'],
+    features: ['Search & Apply to Company','Update daily attendance','Submit day swap requests','View team board'],
     accent: '#0f0e0c',
     accentSoft: 'rgba(15,14,12,.06)',
     blobColor: '#0f0e0c',
@@ -186,16 +186,16 @@ export default function RegisterPage() {
   const goStep2 = () => { if (validateStep1()) setStep(2); };
   const goStep3 = (e: FormEvent) => { e.preventDefault(); if (validateStep2()) setStep(3); };
 
-const BASE = 'https://timso-backend-n5w1.vercel.app';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const submit = async () => {
     if (!selectedRole) return;
     setLoading(true); setServerError('');
     try {
       const { data } = await axios.post(
-        `${BASE}/api/auth/register`,
+        `${API}/api/auth/register`,
         {
-          fullname:        form.fullname,
+          fullName:        form.fullname,
           username:        form.username,
           email:           form.email,
           password:        form.password,
