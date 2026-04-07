@@ -247,7 +247,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);over
 .sidebar-wrap{width:260px;height:100vh;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:all .4s cubic-bezier(.16,1,.3,1);z-index:100;flex-shrink:0}
 .header-pad{backdrop-filter:blur(12px);border-bottom:1px solid var(--border);z-index:90}
 
-.nav-item{transition:all .2s cubic-bezier(.16,1,.3,1);border-radius:14px;cursor:none;display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;padding:12px 16px;border:none;color:var(--text2);background:transparent;margin-bottom:4px}
+.nav-item{transition:all .2s cubic-bezier(.16,1,.3,1);border-radius:14px;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;padding:12px 16px;border:none;color:var(--text2);background:transparent;margin-bottom:4px}
 .nav-item:hover{background:var(--hover);color:var(--text);transform:translateX(4px)}
 .nav-item.active{background:var(--text);color:var(--bg)!important;box-shadow:0 8px 20px rgba(0,0,0,.12)}
 .nav-item svg{width:18px;height:18px;stroke-width:2.2;transition:all .2s}
@@ -262,9 +262,9 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);over
 .greet-card{background:linear-gradient(135deg, var(--text) 0%, #2d2b28 100%);color:var(--bg);padding:40px;border-radius:32px;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.15)}
 .greet-card::after{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:var(--accent);border-radius:50%;filter:blur(80px);opacity:.2}
 
-.btn-primary{background:var(--text);color:var(--bg);border:none;border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
+.btn-primary{background:var(--text);color:var(--bg);border:none;border-radius:16px;font-size:14px;font-weight:700;cursor:pointer;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:10px;box-shadow:0 8px 20px rgba(0,0,0,.1)}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.15);background:var(--accent)}
-.btn-ghost{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:16px;font-size:14px;font-weight:700;cursor:none;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);font-family:'Outfit',sans-serif}
+.btn-ghost{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:16px;font-size:14px;font-weight:700;cursor:pointer;padding:14px 28px;transition:all .3s cubic-bezier(.16,1,.3,1);font-family:'Outfit',sans-serif}
 .btn-ghost:hover{background:var(--hover);border-color:var(--text)}
 
 .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
@@ -294,7 +294,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .act-item{transition:background .18s;border-radius:12px;cursor:none}
 .act-item:hover{background:var(--hover2)}
 
-.logout-btn{transition:all .18s;border-radius:12px;cursor:none}
+.logout-btn{transition:all .18s;border-radius:12px;cursor:pointer}
 .logout-btn:hover{background:rgba(239,68,68,.08);color:#ef4444}
 
 .sk{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
@@ -318,7 +318,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .job-search-inp::placeholder{color:var(--text4)}
 
 .job-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
-.filter-chip{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:none;border:1.5px solid var(--border2);background:var(--card);color:var(--text2);font-family:'Outfit',sans-serif;transition:all .2s}
+.filter-chip{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border2);background:var(--card);color:var(--text2);font-family:'Outfit',sans-serif;transition:all .2s}
 .filter-chip:hover{border-color:var(--accent);color:var(--accent)}
 .filter-chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
@@ -340,7 +340,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .job-salary{font-size:13px;font-weight:800;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:6px}
 .job-salary-val{color:#16a34a}
 
-.job-apply-btn{width:100%;background:var(--text);color:var(--bg);border:none;border-radius:14px;padding:13px;font-size:13px;font-weight:700;cursor:none;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.job-apply-btn{width:100%;background:var(--text);color:var(--bg);border:none;border-radius:14px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .job-apply-btn:hover{background:var(--accent);transform:translateY(-1px)}
 
 .job-stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
@@ -518,8 +518,10 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
       setPostForm({ title: '', description: '', location: 'Remote', type: 'Full-time', salary: '', tags: '' });
       fetchJobs();
     } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string } } };
-      showToast(ax?.response?.data?.message || 'Failed to post job', 'error');
+      const ax = err as { response?: { data?: { message?: string }; status?: number } };
+      const msg = ax?.response?.data?.message || 'Failed to post job';
+      console.error('Post job error:', ax?.response?.status, msg);
+      showToast(msg, 'error');
     } finally { setPostLoading(false); }
   };
 
@@ -564,8 +566,8 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
               <div><label className="lbl">Tags (comma separated)</label><input className="inp" value={postForm.tags} onChange={e => setPostForm(p => ({ ...p, tags: e.target.value }))} placeholder="React, TypeScript, Node.js" /></div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-              <button className="btn-ghost" onClick={() => setShowPostModal(false)} style={{ flex: 1 }}>Cancel</button>
-              <button className="btn-primary" disabled={!postForm.title.trim() || postLoading} onClick={handlePostJob} style={{ flex: 2, justifyContent: 'center' }}>
+              <button className="btn-ghost" onClick={() => setShowPostModal(false)} style={{ flex: 1, cursor: 'pointer' }}>Cancel</button>
+              <button className="btn-primary" disabled={!postForm.title.trim() || postLoading} onClick={handlePostJob} style={{ flex: 2, justifyContent: 'center', cursor: 'pointer' }}>
                 {postLoading ? <span className="spin" /> : 'Post Job'}
               </button>
             </div>

@@ -79,10 +79,10 @@ body.ca #cur{width:10px!important;height:10px!important;opacity:.5}
 .company-meta{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
 .company-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:#f2f0eb;color:#6b6860}
 
-.apply-btn{width:100%;background:#0f0e0c;color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:none;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.apply-btn{width:100%;background:#0f0e0c;color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .apply-btn:hover{background:#f97316;transform:translateY(-1px)}
 .apply-btn:disabled{opacity:.5;pointer-events:none}
-.apply-btn.applied{background:rgba(34,197,94,.1);color:#16a34a;cursor:none}
+.apply-btn.applied{background:rgba(34,197,94,.1);color:#16a34a;cursor:default}
 .apply-btn.applied:hover{background:rgba(34,197,94,.15);transform:none}
 
 .empty-state{text-align:center;padding:80px 40px;background:#fff;border:1.5px dashed rgba(0,0,0,.1);border-radius:24px}
