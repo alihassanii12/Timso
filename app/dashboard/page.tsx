@@ -614,12 +614,13 @@ function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCo
 
       {/* ── USER WITH COMPANY or ADMIN: show job board ── */}
       {(isAdmin || hasCompany) && (<>
-      {showPostModal && (
+      {/* Post Job Modal (admin only) */}
+      {isAdmin && showPostModal && (
         <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setShowPostModal(false) }}>
           <div className="sheet" style={{ maxWidth: 540 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
               <h2 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 900, fontSize: 20, margin: 0 }}>Post a Job</h2>
-              <button onClick={() => setShowPostModal(false)} style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,.08)', background: dark ? '#1e1c19' : '#f8f7f4', cursor: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setShowPostModal(false)} style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(0,0,0,.08)', background: dark ? '#1e1c19' : '#f8f7f4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#6b6860" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
@@ -650,40 +651,31 @@ function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCo
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>{isAdmin ? 'Job Board' : 'Find Job'}</h2>
-          <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>{isAdmin ? 'Manage jobs posted by your company' : 'Discover opportunities from your company'}</p>
+          <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>{isAdmin ? 'Post Job' : 'Find Job'}</h2>
+          <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>{isAdmin ? 'Post jobs for your company' : 'Discover opportunities from your company'}</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {!isAdmin && myApplications.length > 0 && <div style={{ padding: '6px 14px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 12, fontWeight: 700 }}>{myApplications.length} applied</div>}
           {isAdmin && (
-            <>
-              <button className="btn-ghost" onClick={() => router.push('/admin/applications')} style={{ padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Applications
-              </button>
-              <button className="btn-primary" onClick={() => router.push('/admin/jobs')} style={{ padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                Manage Jobs
-              </button>
-            </>
+            <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ padding: '10px 20px', fontSize: 13, cursor: 'pointer' }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v16m8-8H4" /></svg>
+              Post Job
+            </button>
           )}
         </div>
       </div>
-      <div className="job-stats-bar">
-        <div className="job-stat"><span className="job-stat-num">{jobs.length}</span><div className="job-stat-lbl">Open Positions</div></div>
-        <div className="job-stat"><span className="job-stat-num">{jobs.filter(j => j.location === 'Remote').length}</span><div className="job-stat-lbl">Remote Roles</div></div>
-        <div className="job-stat"><span className="job-stat-num">{isAdmin ? jobs.reduce((s, j) => s + (j.applicant_count || 0), 0) : myApplications.length}</span><div className="job-stat-lbl">{isAdmin ? 'Total Applicants' : 'Applied'}</div></div>
-      </div>
 
-      {/* Search + Filters */}
+      {/* User: search + filters */}
+      {!isAdmin && (<>
       <div className="job-search-bar">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="var(--text4)" strokeWidth="2.2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input className="job-search-inp" placeholder="Search by title, company, or skill…" value={jobSearch} onChange={e => setJobSearch(e.target.value)} />
-        {jobSearch && <button onClick={() => setJobSearch('')} style={{ background: 'none', border: 'none', cursor: 'none', color: 'var(--text4)', display: 'flex', padding: 4 }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg></button>}
+        {jobSearch && <button onClick={() => setJobSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text4)', display: 'flex', padding: 4 }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12" /></svg></button>}
       </div>
       <div className="job-filters">
         {JOB_FILTERS.map(f => <button key={f} className={`filter-chip ${activeFilter === f ? 'active' : ''}`} onClick={() => setActiveFilter(f)}>{f}</button>)}
       </div>
+      </>)}
 
       {/* Jobs Grid */}
       {loading ? (
@@ -692,8 +684,8 @@ function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCo
         <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>💼</div>
           <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>{isAdmin ? 'No jobs posted yet' : 'No jobs available'}</h3>
-          <p style={{ color: 'var(--text3)', margin: '0 0 20px', fontSize: 14 }}>{isAdmin ? 'Post your first job to start receiving applications.' : 'Check back later for new opportunities.'}</p>
-          {isAdmin && <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ margin: '0 auto' }}>Post First Job</button>}
+          <p style={{ color: 'var(--text3)', margin: '0 0 20px', fontSize: 14 }}>{isAdmin ? 'Click "Post Job" to add your first listing.' : 'Check back later for new opportunities.'}</p>
+          {isAdmin && <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ margin: '0 auto', cursor: 'pointer' }}>Post First Job</button>}
         </div>
       ) : (
         <div className="jobs-grid">
@@ -708,7 +700,11 @@ function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCo
                     <h3 className="job-title">{job.title}</h3>
                     <p className="job-company">{job.company_name}<span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'var(--bg3)', color: 'var(--text3)' }}>{job.type}</span></p>
                   </div>
-                  {isAdmin && <button onClick={() => handleDeleteJob(job.id)} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'none', flexShrink: 0 }}><svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>}
+                  {isAdmin && (
+                    <button onClick={() => handleDeleteJob(job.id)} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  )}
                 </div>
                 <div className="job-meta">
                   <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>{job.location}</span>
