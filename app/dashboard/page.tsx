@@ -454,9 +454,11 @@ function TaskModal({ users, onSubmit, onClose, loading }: {
 }
 
 /* ══ FIND JOB SECTION ══ */
-function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) {
+function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCompany: boolean; dark: boolean }) {
+  const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [myApplications, setMyApplications] = useState<JobApplication[]>([]);
+  const [companyApplications, setCompanyApplications] = useState<{ id: number|string; company_name: string; company_description?: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<number | string | null>(null);
   const [jobSearch, setJobSearch] = useState('');
@@ -488,7 +490,19 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
     } catch { setMyApplications([]); }
   }, [isAdmin]);
 
-  useEffect(() => { fetchJobs(); fetchMyApplications(); }, [fetchJobs, fetchMyApplications]);
+  const fetchCompanyApplications = useCallback(async () => {
+    if (isAdmin || hasCompany) return;
+    try {
+      const r = await axios.get(`${API}/api/companies/my-applications`, { withCredentials: true });
+      setCompanyApplications(r.data?.applications || []);
+    } catch { setCompanyApplications([]); }
+  }, [isAdmin, hasCompany]);
+
+  useEffect(() => {
+    fetchJobs();
+    fetchMyApplications();
+    fetchCompanyApplications();
+  }, [fetchJobs, fetchMyApplications, fetchCompanyApplications]);
 
   const handleApply = async (jobId: number | string, title: string) => {
     setApplying(jobId);
@@ -541,7 +555,65 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
     <div>
       {toast && <div className="toast" style={{ background: toast.type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff' }}><span>{toast.type === 'success' ? '✓' : '✕'}</span> {toast.msg}</div>}
 
-      {/* Post Job Modal (admin) */}
+      {/* ── USER WITHOUT COMPANY: show applications status + find company button ── */}
+      {!isAdmin && !hasCompany && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+            <div>
+              <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 28, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-1px' }}>Find Job</h2>
+              <p style={{ fontSize: 14, color: 'var(--text3)', margin: 0 }}>Join a company to access job listings and your team</p>
+            </div>
+            <button className="btn-primary" onClick={() => router.push('/find-company')} style={{ padding: '12px 24px', fontSize: 13, cursor: 'pointer' }}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              Find Company
+            </button>
+          </div>
+
+          {/* Applications status */}
+          {companyApplications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>🏢</div>
+              <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 22, fontWeight: 900, margin: '0 0 10px' }}>No company yet</h3>
+              <p style={{ color: 'var(--text3)', margin: '0 0 24px', fontSize: 14, lineHeight: 1.6 }}>Apply to a company to get access to your team dashboard, job listings, and more.</p>
+              <button className="btn-primary" onClick={() => router.push('/find-company')} style={{ margin: '0 auto', cursor: 'pointer' }}>
+                Browse Companies →
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 16 }}>
+                Your Applications ({companyApplications.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {companyApplications.map(app => {
+                  const statusColor = app.status === 'accepted' ? '#16a34a' : app.status === 'rejected' ? '#ef4444' : '#f97316';
+                  const statusBg = app.status === 'accepted' ? 'rgba(34,197,94,.1)' : app.status === 'rejected' ? 'rgba(239,68,68,.1)' : 'rgba(249,115,22,.1)';
+                  const statusLabel = app.status === 'accepted' ? '✓ Accepted' : app.status === 'rejected' ? '✕ Rejected' : '⏳ Pending';
+                  return (
+                    <div key={app.id} className="card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🏢</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2 }}>{app.company_name}</div>
+                        {app.company_description && <div style={{ fontSize: 12, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.company_description}</div>}
+                        <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 4 }}>{new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                      </div>
+                      <div style={{ padding: '6px 14px', borderRadius: 100, background: statusBg, color: statusColor, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{statusLabel}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 20, textAlign: 'center' }}>
+                <button className="btn-ghost" onClick={() => router.push('/find-company')} style={{ cursor: 'pointer' }}>
+                  Apply to more companies →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── USER WITH COMPANY or ADMIN: show job board ── */}
+      {(isAdmin || hasCompany) && (<>
       {showPostModal && (
         <div className="overlay" onClick={e => { if (e.target === e.currentTarget) setShowPostModal(false) }}>
           <div className="sheet" style={{ maxWidth: 540 }}>
@@ -583,11 +655,20 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {!isAdmin && myApplications.length > 0 && <div style={{ padding: '6px 14px', borderRadius: 100, background: 'rgba(34,197,94,.1)', color: '#16a34a', fontSize: 12, fontWeight: 700 }}>{myApplications.length} applied</div>}
-          {isAdmin && <button className="btn-primary" onClick={() => setShowPostModal(true)} style={{ padding: '10px 20px', fontSize: 13 }}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 4v16m8-8H4" /></svg>Post Job</button>}
+          {isAdmin && (
+            <>
+              <button className="btn-ghost" onClick={() => router.push('/admin/applications')} style={{ padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Applications
+              </button>
+              <button className="btn-primary" onClick={() => router.push('/admin/jobs')} style={{ padding: '10px 18px', fontSize: 13, cursor: 'pointer' }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Manage Jobs
+              </button>
+            </>
+          )}
         </div>
       </div>
-
-      {/* Stats */}
       <div className="job-stats-bar">
         <div className="job-stat"><span className="job-stat-num">{jobs.length}</span><div className="job-stat-lbl">Open Positions</div></div>
         <div className="job-stat"><span className="job-stat-num">{jobs.filter(j => j.location === 'Remote').length}</span><div className="job-stat-lbl">Remote Roles</div></div>
@@ -649,6 +730,7 @@ function FindJobSection({ isAdmin, dark }: { isAdmin: boolean; dark: boolean }) 
           })}
         </div>
       )}
+      </>)}
     </div>
   );
 }
@@ -756,10 +838,7 @@ function Dashboard() {
         const u = d?.user || d?.data?.user || d?.data || d || null;
         if (u) {
           setUser(u);
-          // If user has no company, redirect to find-company page
-          if (!u.company_id && u.role !== 'admin') {
-            router.push('/find-company');
-          }
+          // Users without company stay in dashboard — Find Job tab handles it
         }
       })
       .catch(() => router.push('/login'))
@@ -1001,7 +1080,15 @@ function Dashboard() {
                   {/* Applications section (admin only) */}
                   {isAdmin && applications.length > 0 && (
                     <div>
-                      <SectionHeader title="Pending Applications" subtitle={`${applications.length} member${applications.length > 1 ? 's' : ''} want to join your workspace`} />
+                      <SectionHeader
+                        title="Pending Applications"
+                        subtitle={`${applications.length} member${applications.length > 1 ? 's' : ''} want to join your workspace`}
+                        action={
+                          <button onClick={() => router.push('/admin/applications')} style={{ padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border2)', background: 'var(--card)', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)', fontFamily: 'Outfit,sans-serif', transition: 'all .2s' }}>
+                            View All →
+                          </button>
+                        }
+                      />
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
                         {applications.map(app => (
                           <div key={app.id} className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -1121,7 +1208,7 @@ function Dashboard() {
               )}
 
               {/* ── FIND JOB ── */}
-              {activeNav === 'findjob' && <FindJobSection isAdmin={isAdmin} dark={dark} />}
+              {activeNav === 'findjob' && <FindJobSection isAdmin={isAdmin} hasCompany={!!user?.company_id} dark={dark} />}
 
               {/* ── ANALYTICS / MANAGE / SETTINGS (admin stubs) ── */}
               {(activeNav === 'analytics' || activeNav === 'manage' || activeNav === 'settings') && (
