@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
@@ -135,7 +135,6 @@ export default function FindCompanyPage() {
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [applying, setApplying] = useState<number | string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -189,17 +188,15 @@ export default function FindCompanyPage() {
     setSelectedCompany(company);
     setJobs([]);
     fetchJobs(company.id);
-    // Poll every 10s for near-realtime updates
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(() => {
-      fetchJobs(company.id);
-      fetchMyApplications();
-    }, 10000);
   };
 
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
+  // Manual refresh
+  const handleRefresh = () => {
+    if (selectedCompany) {
+      fetchJobs(selectedCompany.id);
+      fetchMyApplications();
+    }
+  };
 
   const handleApply = async (jobId: number | string, title: string) => {
     setApplying(jobId);
@@ -245,8 +242,7 @@ export default function FindCompanyPage() {
             </button>
             <div>
               <div className="font-syne" style={{ fontSize: 16, fontWeight: 900, letterSpacing: '-.3px' }}>Find Company</div>
-              <div style={{ fontSize: 11, color: '#9e9b94', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span className="live-dot" />
+              <div style={{ fontSize: 11, color: '#9e9b94' }}>
                 {filtered.length} {filtered.length === 1 ? 'company' : 'companies'}
               </div>
             </div>
@@ -340,11 +336,16 @@ export default function FindCompanyPage() {
                     </p>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="live-dot" />
                     <span style={{ fontSize: 12, color: '#9e9b94', fontWeight: 600 }}>
                       {loadingJobs ? 'Loading jobs…' : `${jobs.length} open position${jobs.length !== 1 ? 's' : ''}`}
                     </span>
-                    <span style={{ fontSize: 12, color: '#c8c5be' }}>· Updates every 10s</span>
+                    <button
+                      onClick={handleRefresh}
+                      style={{ padding: '4px 10px', borderRadius: 8, border: '1.5px solid rgba(0,0,0,.1)', background: 'transparent', fontSize: 11, fontWeight: 700, cursor: 'pointer', color: '#6b6860', fontFamily: 'Outfit,sans-serif', display: 'flex', alignItems: 'center', gap: 5, transition: 'all .2s' }}
+                    >
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                      Refresh
+                    </button>
                   </div>
                 </div>
               </div>
