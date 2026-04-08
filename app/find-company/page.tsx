@@ -1,108 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-// Read access token from localStorage or cookie and attach as Bearer header
-const authHeaders = () => {
-  const token = (typeof window !== 'undefined' ? localStorage.getItem('timso_token') : null)
-    || (() => {
-      const match = typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/) : null;
-      return match ? decodeURIComponent(match[1]) : null;
-    })();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-const G = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap');
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%}
-body{font-family:'Outfit',sans-serif;background:#faf9f7;color:#0f0e0c;cursor:none;overflow-x:hidden}
-.font-syne{font-family:'Syne',sans-serif}
-
-#cur{position:fixed;top:0;left:0;width:14px;height:14px;pointer-events:none;z-index:99999;transition:width .15s,height .15s,opacity .15s}
-body.cm #cur{width:20px!important;height:20px!important}
-body.ch #cur{width:17px!important;height:17px!important;opacity:.7}
-body.ca #cur{width:10px!important;height:10px!important;opacity:.5}
-
-@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-
-.a-rise{opacity:0;animation:riseIn .55s cubic-bezier(.16,1,.3,1) forwards}
-.float{animation:float 3.5s ease-in-out infinite}
-.spin-el{width:16px;height:16px;border:2px solid rgba(0,0,0,.15);border-top-color:#f97316;border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
-.sk{background:linear-gradient(90deg,#f2f0eb 25%,#fff 50%,#f2f0eb 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
-
-.page-wrap{min-height:100vh;background:#faf9f7}
-
-.top-bar{position:sticky;top:0;z-index:50;background:rgba(250,249,247,.9);backdrop-filter:blur(16px);border-bottom:1px solid rgba(0,0,0,.06);padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between}
-
-.logo-btn{font-family:'Syne',sans-serif;font-weight:900;font-size:20px;background:none;border:none;cursor:none;color:#0f0e0c;display:flex;align-items:center;gap:4px;padding:0;letter-spacing:-.5px}
-.logo-dot{width:8px;height:8px;border-radius:50%;border:2px solid #0f0e0c;display:inline-block;margin-left:2px}
-
-.back-btn{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:12px;border:1.5px solid rgba(0,0,0,.1);background:#fff;font-size:13px;font-weight:700;cursor:none;transition:all .2s;color:#0f0e0c;font-family:'Outfit',sans-serif}
-.back-btn:hover{border-color:#0f0e0c;background:#f2f0eb}
-
-.hero{padding:80px 48px 48px;max-width:1200px;margin:0 auto}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:100px;background:rgba(249,115,22,.1);color:#d45e00;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:24px}
-.hero-title{font-family:'Syne',sans-serif;font-size:clamp(36px,6vw,60px);font-weight:900;letter-spacing:-2px;line-height:1;margin:0 0 16px;color:#0f0e0c}
-.hero-sub{font-size:16px;color:#6b6860;line-height:1.6;max-width:520px;margin:0}
-
-.search-bar-wrap{padding:0 48px;max-width:1200px;margin:0 auto 48px}
-.search-bar{display:flex;gap:12px;align-items:center;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:20px;padding:8px 8px 8px 24px;box-shadow:0 4px 24px rgba(0,0,0,.06);transition:border-color .2s,box-shadow .2s}
-.search-bar:focus-within{border-color:#f97316;box-shadow:0 4px 24px rgba(249,115,22,.12)}
-.search-inp{flex:1;border:none;outline:none;font-size:15px;font-family:'Outfit',sans-serif;color:#0f0e0c;background:transparent}
-.search-inp::placeholder{color:#c8c5be}
-.search-btn{background:#0f0e0c;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-size:14px;font-weight:700;cursor:none;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:8px;transition:all .2s;white-space:nowrap}
-.search-btn:hover{background:#f97316;transform:translateY(-1px)}
-
-.content-wrap{padding:0 48px 80px;max-width:1200px;margin:0 auto}
-
-.section-label{font-size:11px;font-weight:800;color:#9e9b94;text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px}
-
-.companies-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(340px,1fr));gap:20px}
-
-.company-card{background:#fff;border:1.5px solid rgba(0,0,0,.07);border-radius:24px;padding:28px;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;cursor:none}
-.company-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(249,115,22,.04),transparent);opacity:0;transition:opacity .3s}
-.company-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 16px 48px rgba(249,115,22,.08);transform:translateY(-4px)}
-.company-card:hover::before{opacity:1}
-
-.company-icon{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(249,115,22,.08);margin-bottom:20px;flex-shrink:0}
-.company-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:900;margin:0 0 8px;color:#0f0e0c;letter-spacing:-.5px}
-.company-desc{font-size:13px;color:#6b6860;line-height:1.6;margin:0 0 24px}
-.company-meta{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
-.company-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:#f2f0eb;color:#6b6860}
-
-.apply-btn{width:100%;background:#0f0e0c;color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.apply-btn:hover{background:#f97316;transform:translateY(-1px)}
-.apply-btn:disabled{opacity:.5;pointer-events:none}
-.apply-btn.applied{background:rgba(34,197,94,.1);color:#16a34a;cursor:default}
-.apply-btn.applied:hover{background:rgba(34,197,94,.15);transform:none}
-
-.empty-state{text-align:center;padding:80px 40px;background:#fff;border:1.5px dashed rgba(0,0,0,.1);border-radius:24px}
-
-.toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;animation:riseIn .35s cubic-bezier(.16,1,.3,1) forwards;box-shadow:0 8px 28px rgba(0,0,0,.14)}
-
-.status-banner{background:rgba(249,115,22,.06);border:1.5px solid rgba(249,115,22,.15);border-radius:16px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:32px}
-
-@media(max-width:768px){
-  .top-bar{padding:0 20px}
-  .hero{padding:60px 20px 32px}
-  .search-bar-wrap{padding:0 20px;margin-bottom:32px}
-  .content-wrap{padding:0 20px 60px}
-  body{cursor:auto}
-  #cur{display:none}
-}
-@media(max-width:480px){
-  .companies-grid{grid-template-columns:1fr}
-}
-`;
+const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('timso_token') : null;
+const authH = () => { const t = getToken(); return t ? { Authorization: `Bearer ${t}` } : {}; };
 
 interface Company {
   id: number | string;
@@ -111,88 +16,158 @@ interface Company {
   admin_id: number | string;
 }
 
-interface Application {
+interface Job {
   id: number | string;
-  company_id: number | string;
-  status: 'pending' | 'accepted' | 'rejected';
+  title: string;
+  description?: string;
+  location: string;
+  type: string;
+  salary?: string;
+  tags: string[];
+  applicant_count?: number;
+  created_at: string;
 }
 
-const Toast = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => (
-  <div className="toast" style={{ background: type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff' }}>
-    <span>{type === 'success' ? '✓' : '✕'}</span> {msg}
-  </div>
-);
+interface JobApplication {
+  id: number | string;
+  job_id: number | string;
+  status: string;
+}
+
+const G = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Syne:wght@700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{font-family:'Outfit',sans-serif;background:#faf9f7;color:#0f0e0c;overflow-x:hidden}
+.font-syne{font-family:'Syne',sans-serif}
+
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes slideRight{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.a-rise{opacity:0;animation:riseIn .5s cubic-bezier(.16,1,.3,1) forwards}
+.a-slide{opacity:0;animation:slideRight .4s cubic-bezier(.16,1,.3,1) forwards}
+.sk{background:linear-gradient(90deg,#f2f0eb 25%,#fff 50%,#f2f0eb 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
+.spin-el{width:16px;height:16px;border:2px solid rgba(0,0,0,.1);border-top-color:#f97316;border-radius:50%;animation:spin .65s linear infinite;display:inline-block}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s ease-in-out infinite;display:inline-block}
+
+/* Layout */
+.page{display:flex;height:100vh;overflow:hidden}
+.left-panel{width:380px;flex-shrink:0;border-right:1px solid rgba(0,0,0,.07);display:flex;flex-direction:column;background:#fff;overflow:hidden}
+.right-panel{flex:1;overflow-y:auto;background:#faf9f7}
+
+/* Top bar */
+.top-bar{padding:20px 24px;border-bottom:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:12px;background:#fff;flex-shrink:0}
+.back-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid rgba(0,0,0,.1);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.back-btn:hover{border-color:#0f0e0c;background:#f2f0eb}
+
+/* Search */
+.search-wrap{padding:16px 20px;border-bottom:1px solid rgba(0,0,0,.06);flex-shrink:0}
+.search-bar{display:flex;align-items:center;gap:10px;background:#f8f7f4;border:1.5px solid transparent;border-radius:14px;padding:10px 14px;transition:all .2s}
+.search-bar:focus-within{background:#fff;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.08)}
+.search-inp{flex:1;border:none;outline:none;font-size:13px;font-family:'Outfit',sans-serif;color:#0f0e0c;background:transparent}
+.search-inp::placeholder{color:#c8c5be}
+
+/* Company list */
+.companies-list{flex:1;overflow-y:auto;padding:12px}
+.company-item{padding:14px 16px;border-radius:14px;cursor:pointer;transition:all .2s;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:12px}
+.company-item:hover{background:#f8f7f4;border-color:rgba(0,0,0,.06)}
+.company-item.active{background:rgba(249,115,22,.06);border-color:rgba(249,115,22,.25)}
+.company-icon{width:40px;height:40px;border-radius:12px;background:rgba(249,115,22,.1);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.company-name{font-size:14px;font-weight:800;color:#0f0e0c;margin-bottom:2px}
+.company-desc{font-size:11px;color:#9e9b94;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+
+/* Right panel content */
+.right-content{padding:40px}
+.empty-right{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px}
+
+/* Job cards */
+.jobs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:24px}
+.job-card{background:#fff;border:1.5px solid rgba(0,0,0,.07);border-radius:20px;padding:24px;transition:all .3s cubic-bezier(.16,1,.3,1);cursor:default}
+.job-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 12px 36px rgba(249,115,22,.08);transform:translateY(-3px)}
+.job-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:900;margin:0 0 4px;color:#0f0e0c;letter-spacing:-.3px}
+.job-meta{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.job-tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;background:#f2f0eb;color:#6b6860}
+.job-salary{font-size:13px;font-weight:800;color:#16a34a;margin:8px 0 16px;display:flex;align-items:center;gap:6px}
+
+.apply-btn{width:100%;background:#0f0e0c;color:#fff;border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.apply-btn:hover{background:#f97316;transform:translateY(-1px)}
+.apply-btn:disabled{opacity:.5;pointer-events:none}
+.apply-btn.applied{background:rgba(34,197,94,.1);color:#16a34a;cursor:default}
+
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 18px;border-radius:14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;animation:riseIn .35s cubic-bezier(.16,1,.3,1) forwards;box-shadow:0 8px 28px rgba(0,0,0,.14)}
+
+@media(max-width:768px){
+  .page{flex-direction:column;height:auto}
+  .left-panel{width:100%;height:auto;border-right:none;border-bottom:1px solid rgba(0,0,0,.07)}
+  .companies-list{max-height:280px}
+  .right-panel{min-height:60vh}
+  .right-content{padding:24px 16px}
+  .jobs-grid{grid-template-columns:1fr}
+}
+`;
+
+const timeAgo = (d: string) => {
+  try {
+    const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 60) return `${s}s ago`;
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  } catch { return d; }
+};
 
 const COMPANY_EMOJIS = ['🏢', '🚀', '💡', '🌿', '⚡', '🎯', '🔮', '🏗️', '🌊', '🎪'];
 const getEmoji = (id: number | string) => COMPANY_EMOJIS[Number(id) % COMPANY_EMOJIS.length];
+const JOB_EMOJIS = ['💼', '🚀', '⚡', '🎯', '🔮', '🌿', '🏗️', '🎨', '📊', '🔧'];
+const getJobEmoji = (id: number | string) => JOB_EMOJIS[Number(id) % JOB_EMOJIS.length];
 
 export default function FindCompanyPage() {
   const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [myApplications, setMyApplications] = useState<Application[]>([]);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [myApplications, setMyApplications] = useState<JobApplication[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
+  const [loadingJobs, setLoadingJobs] = useState(false);
   const [applying, setApplying] = useState<number | string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [user, setUser] = useState<{ id?: number | string; company_id?: number | string } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
   };
 
+  // Auth check
   useEffect(() => {
-    // Custom cursor
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) return;
-    const cur = document.getElementById('cur') as HTMLElement;
-    if (!cur) return;
-    let mt: ReturnType<typeof setTimeout>;
-    const mv = (e: MouseEvent) => {
-      cur.style.left = (e.clientX - 2) + 'px';
-      cur.style.top = (e.clientY - 2) + 'px';
-      document.body.classList.add('cm');
-      clearTimeout(mt);
-      mt = setTimeout(() => document.body.classList.remove('cm'), 140);
-    };
-    document.addEventListener('mousemove', mv);
-    document.addEventListener('mousedown', () => document.body.classList.add('ca'));
-    document.addEventListener('mouseup', () => document.body.classList.remove('ca'));
-    return () => document.removeEventListener('mousemove', mv);
-  }, []);
-
-  useEffect(() => {
-    axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authHeaders() })
+    axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authH() })
       .then(r => {
         const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-        if (u) {
-          setUser(u);
-          // If already in a company, redirect to dashboard
-          if (u.company_id) router.push('/dashboard');
-        }
+        if (!u) router.push('/login');
+        // Admin should not be here
+        if (u?.role === 'admin') router.push('/dashboard');
       })
       .catch(() => router.push('/login'));
   }, [router]);
 
+  // Fetch companies
   const fetchCompanies = useCallback(async () => {
-    setLoading(true);
     try {
-      const r = await axios.get(`${API}/api/companies`, { withCredentials: true, headers: authHeaders() });
-      if (r.data?.success) setCompanies(r.data.companies);
-    } catch {
-      setCompanies([]);
-    } finally {
-      setLoading(false);
-    }
+      const r = await axios.get(`${API}/api/companies`, { withCredentials: true, headers: authH() });
+      setCompanies(r.data?.companies || []);
+    } catch { setCompanies([]); }
+    finally { setLoadingCompanies(false); }
   }, []);
 
+  // Fetch my job applications
   const fetchMyApplications = useCallback(async () => {
     try {
-      const r = await axios.get(`${API}/api/companies/my-applications`, { withCredentials: true, headers: authHeaders() });
-      if (r.data?.success) setMyApplications(r.data.applications || []);
-    } catch {
-      setMyApplications([]);
-    }
+      const r = await axios.get(`${API}/api/jobs/my-applications`, { withCredentials: true, headers: authH() });
+      setMyApplications(r.data?.data?.applications || []);
+    } catch { setMyApplications([]); }
   }, []);
 
   useEffect(() => {
@@ -200,234 +175,268 @@ export default function FindCompanyPage() {
     fetchMyApplications();
   }, [fetchCompanies, fetchMyApplications]);
 
-  const handleApply = async (companyId: number | string) => {
-    setApplying(companyId);
+  // Fetch jobs for selected company + polling for near-realtime
+  const fetchJobs = useCallback(async (companyId: number | string) => {
+    setLoadingJobs(true);
     try {
-      const r = await axios.post(`${API}/api/companies/apply`, { companyId }, { withCredentials: true, headers: authHeaders() });
-      if (r.data?.success) {
-        showToast('Application sent! Waiting for admin approval.');
-        fetchMyApplications();
-      }
-    } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string } } };
-      showToast(ax?.response?.data?.message || 'Failed to apply.', 'error');
-    } finally {
-      setApplying(null);
-    }
+      const r = await axios.get(`${API}/api/jobs/company/${companyId}`, { withCredentials: true, headers: authH() });
+      setJobs(r.data?.data?.jobs || []);
+    } catch { setJobs([]); }
+    finally { setLoadingJobs(false); }
+  }, []);
+
+  const selectCompany = (company: Company) => {
+    setSelectedCompany(company);
+    setJobs([]);
+    fetchJobs(company.id);
+    // Poll every 10s for near-realtime updates
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => {
+      fetchJobs(company.id);
+      fetchMyApplications();
+    }, 10000);
   };
 
-  const getAppStatus = (companyId: number | string) =>
-    myApplications.find(a => String(a.company_id) === String(companyId));
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const handleApply = async (jobId: number | string, title: string) => {
+    setApplying(jobId);
+    try {
+      await axios.post(`${API}/api/jobs/${jobId}/apply`, {}, { withCredentials: true, headers: authH() });
+      showToast(`Applied to "${title}"!`);
+      fetchMyApplications();
+      // Refresh jobs to update applicant count
+      if (selectedCompany) fetchJobs(selectedCompany.id);
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      showToast(ax?.response?.data?.message || 'Failed to apply', 'error');
+    } finally { setApplying(null); }
+  };
+
+  const getAppStatus = (jobId: number | string) =>
+    myApplications.find(a => String(a.job_id) === String(jobId));
 
   const filtered = companies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.description || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const pendingCount = myApplications.filter(a => a.status === 'pending').length;
-
   return (
     <>
       <style>{G}</style>
-      <svg id="cur" viewBox="0 0 24 24" fill="none" style={{ position: 'fixed', pointerEvents: 'none', zIndex: 99999, width: 14, height: 14, top: 0, left: 0 }}>
-        <path d="M4 2L20 10.5L12.5 12.5L10 20L4 2Z" fill="#0f0e0c" stroke="#0f0e0c" strokeWidth="1" strokeLinejoin="round" />
-      </svg>
-      {toast && <Toast msg={toast.msg} type={toast.type} />}
 
-      <div className="page-wrap">
-        {/* TOP BAR */}
-        <header className="top-bar">
-          <button className="logo-btn" onClick={() => router.push('/')}>
-            timso
-            <span className="logo-dot" />
-          </button>
-          <button className="back-btn" onClick={() => router.push('/dashboard')}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            Back to Dashboard
-          </button>
-        </header>
-
-        {/* HERO */}
-        <div className="hero a-rise">
-          <div className="hero-badge">
-            <span className="float" style={{ display: 'inline-block' }}>🔍</span>
-            Find Your Workspace
-          </div>
-          <h1 className="hero-title font-syne">
-            Join your team's<br />workspace
-          </h1>
-          <p className="hero-sub">
-            Browse available companies, request to join, and start collaborating with your team in real-time.
-          </p>
+      {toast && (
+        <div className="toast" style={{ background: toast.type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff' }}>
+          <span>{toast.type === 'success' ? '✓' : '✕'}</span> {toast.msg}
         </div>
+      )}
 
-        {/* SEARCH BAR */}
-        <div className="search-bar-wrap a-rise" style={{ animationDelay: '.1s' }}>
-          <div className="search-bar">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#9e9b94" strokeWidth="2.2">
-              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              className="search-inp"
-              placeholder="Search by company name or description…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{ background: 'none', border: 'none', cursor: 'none', color: '#9e9b94', padding: 4, display: 'flex' }}
-              >
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-            <button className="search-btn" onClick={fetchCompanies}>
+      <div className="page">
+        {/* ── LEFT PANEL: Companies ── */}
+        <div className="left-panel">
+          {/* Top bar */}
+          <div className="top-bar">
+            <button className="back-btn" onClick={() => router.push('/dashboard')}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <path d="M15 18l-6-6 6-6"/>
               </svg>
-              Refresh
             </button>
-          </div>
-        </div>
-
-        {/* CONTENT */}
-        <div className="content-wrap">
-          {/* Pending applications banner */}
-          {pendingCount > 0 && (
-            <div className="status-banner a-rise">
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(249,115,22,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#f97316" strokeWidth="2.2">
-                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#0f0e0c' }}>
-                  {pendingCount} pending application{pendingCount > 1 ? 's' : ''}
-                </div>
-                <div style={{ fontSize: 12, color: '#6b6860', marginTop: 2 }}>
-                  Your requests are being reviewed by the company admins. We'll notify you when there's an update.
-                </div>
+            <div>
+              <div className="font-syne" style={{ fontSize: 16, fontWeight: 900, letterSpacing: '-.3px' }}>Find Company</div>
+              <div style={{ fontSize: 11, color: '#9e9b94', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span className="live-dot" />
+                {filtered.length} {filtered.length === 1 ? 'company' : 'companies'}
               </div>
             </div>
-          )}
-
-          <div className="section-label">
-            {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'company' : 'companies'} available`}
           </div>
 
-          {loading ? (
-            <div className="companies-grid">
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{ background: '#fff', border: '1.5px solid rgba(0,0,0,.07)', borderRadius: 24, padding: 28 }}>
-                  <div className="sk" style={{ width: 56, height: 56, borderRadius: 18, marginBottom: 20 }} />
-                  <div className="sk" style={{ height: 22, width: '60%', marginBottom: 10 }} />
-                  <div className="sk" style={{ height: 13, width: '90%', marginBottom: 6 }} />
-                  <div className="sk" style={{ height: 13, width: '70%', marginBottom: 24 }} />
-                  <div className="sk" style={{ height: 46, borderRadius: 14 }} />
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              <div className="float" style={{ fontSize: 64, marginBottom: 24, display: 'block' }}>🏙️</div>
-              <h3 className="font-syne" style={{ fontSize: 24, fontWeight: 900, margin: '0 0 12px', letterSpacing: '-1px' }}>
-                {search ? 'No companies found' : 'No companies yet'}
-              </h3>
-              <p style={{ color: '#9e9b94', margin: '0 0 24px', lineHeight: 1.6 }}>
-                {search
-                  ? `No results for "${search}". Try a different search term.`
-                  : 'No companies are registered yet. Ask your admin to sign up first!'}
-              </p>
+          {/* Search */}
+          <div className="search-wrap">
+            <div className="search-bar">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9e9b94" strokeWidth="2.2">
+                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              <input
+                className="search-inp"
+                placeholder="Search companies…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
               {search && (
-                <button className="back-btn" style={{ margin: '0 auto' }} onClick={() => setSearch('')}>
-                  Clear search
+                <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c8c5be', padding: 0, display: 'flex' }}>
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               )}
             </div>
-          ) : (
-            <div className="companies-grid">
-              {filtered.map((company, i) => {
-                const appStatus = getAppStatus(company.id);
-                const isPending = appStatus?.status === 'pending';
-                const isAccepted = appStatus?.status === 'accepted';
-                const isRejected = appStatus?.status === 'rejected';
+          </div>
 
-                return (
-                  <div
-                    key={company.id}
-                    className="company-card a-rise"
-                    style={{ animationDelay: `${i * 0.06}s` }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
-                      <div className="company-icon">
-                        {getEmoji(company.id)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="company-name font-syne">{company.name}</h3>
-                        <div className="company-meta">
-                          <span className="company-tag">🏢 Company</span>
-                          {isPending && <span className="company-tag" style={{ background: 'rgba(249,115,22,.1)', color: '#d45e00' }}>⏳ Applied</span>}
-                          {isAccepted && <span className="company-tag" style={{ background: 'rgba(34,197,94,.1)', color: '#16a34a' }}>✓ Accepted</span>}
-                          {isRejected && <span className="company-tag" style={{ background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>✕ Rejected</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="company-desc">
-                      {company.description || 'No description provided. Apply to learn more about this team.'}
-                    </p>
-
-                    {isAccepted ? (
-                      <button
-                        className="apply-btn"
-                        style={{ background: 'rgba(34,197,94,.1)', color: '#16a34a' }}
-                        onClick={() => router.push('/dashboard')}
-                      >
-                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                        Go to Dashboard
-                      </button>
-                    ) : isPending ? (
-                      <button className="apply-btn" disabled style={{ background: 'rgba(249,115,22,.1)', color: '#d45e00', opacity: 1 }}>
-                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Request Pending…
-                      </button>
-                    ) : isRejected ? (
-                      <button
-                        className="apply-btn"
-                        onClick={() => handleApply(company.id)}
-                        disabled={applying === company.id}
-                      >
-                        {applying === company.id ? <span className="spin-el" /> : '↩ Apply Again'}
-                      </button>
-                    ) : (
-                      <button
-                        className="apply-btn"
-                        onClick={() => handleApply(company.id)}
-                        disabled={applying === company.id}
-                      >
-                        {applying === company.id ? (
-                          <><span className="spin-el" /> Applying…</>
-                        ) : (
-                          <>
-                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M12 4v16m8-8H4" />
-                            </svg>
-                            Request to Join
-                          </>
-                        )}
-                      </button>
-                    )}
+          {/* Companies list */}
+          <div className="companies-list">
+            {loadingCompanies ? (
+              [1,2,3,4].map(i => (
+                <div key={i} style={{ padding: '14px 16px', display: 'flex', gap: 12, marginBottom: 6 }}>
+                  <div className="sk" style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="sk" style={{ height: 14, width: '60%', marginBottom: 6 }} />
+                    <div className="sk" style={{ height: 11, width: '80%' }} />
                   </div>
-                );
-              })}
+                </div>
+              ))
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9e9b94' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>🏙️</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{search ? 'No results' : 'No companies yet'}</div>
+              </div>
+            ) : (
+              filtered.map((company, i) => (
+                <div
+                  key={company.id}
+                  className={`company-item a-rise ${selectedCompany?.id === company.id ? 'active' : ''}`}
+                  style={{ animationDelay: `${i * 0.04}s` }}
+                  onClick={() => selectCompany(company)}
+                >
+                  <div className="company-icon">{getEmoji(company.id)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="company-name">{company.name}</div>
+                    <div className="company-desc">{company.description || 'Click to view jobs'}</div>
+                  </div>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#c8c5be" strokeWidth="2.5">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── RIGHT PANEL: Jobs ── */}
+        <div className="right-panel">
+          {!selectedCompany ? (
+            <div className="empty-right">
+              <div style={{ fontSize: 72, marginBottom: 20 }}>👈</div>
+              <h2 className="font-syne" style={{ fontSize: 24, fontWeight: 900, margin: '0 0 10px', letterSpacing: '-1px' }}>
+                Select a company
+              </h2>
+              <p style={{ color: '#9e9b94', fontSize: 14, maxWidth: 300, lineHeight: 1.6 }}>
+                Click on a company from the left to see their open job listings and apply.
+              </p>
+            </div>
+          ) : (
+            <div className="right-content">
+              {/* Company header */}
+              <div className="a-rise" style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 32 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 18, background: 'rgba(249,115,22,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0 }}>
+                  {getEmoji(selectedCompany.id)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h1 className="font-syne" style={{ fontSize: 28, fontWeight: 900, margin: '0 0 6px', letterSpacing: '-1px' }}>
+                    {selectedCompany.name}
+                  </h1>
+                  {selectedCompany.description && (
+                    <p style={{ fontSize: 14, color: '#6b6860', margin: '0 0 12px', lineHeight: 1.6 }}>
+                      {selectedCompany.description}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="live-dot" />
+                    <span style={{ fontSize: 12, color: '#9e9b94', fontWeight: 600 }}>
+                      {loadingJobs ? 'Loading jobs…' : `${jobs.length} open position${jobs.length !== 1 ? 's' : ''}`}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#c8c5be' }}>· Updates every 10s</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Jobs */}
+              {loadingJobs ? (
+                <div className="jobs-grid">
+                  {[1,2,3].map(i => (
+                    <div key={i} style={{ background: '#fff', border: '1.5px solid rgba(0,0,0,.07)', borderRadius: 20, padding: 24 }}>
+                      <div className="sk" style={{ height: 18, width: '70%', marginBottom: 10 }} />
+                      <div className="sk" style={{ height: 13, width: '50%', marginBottom: 16 }} />
+                      <div className="sk" style={{ height: 44, borderRadius: 12 }} />
+                    </div>
+                  ))}
+                </div>
+              ) : jobs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 40px', background: '#fff', border: '1.5px dashed rgba(0,0,0,.1)', borderRadius: 20 }}>
+                  <div style={{ fontSize: 48, marginBottom: 14 }}>📭</div>
+                  <h3 className="font-syne" style={{ fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>No open positions</h3>
+                  <p style={{ color: '#9e9b94', margin: 0, fontSize: 14 }}>
+                    {selectedCompany.name} hasn't posted any jobs yet. Check back later.
+                  </p>
+                </div>
+              ) : (
+                <div className="jobs-grid">
+                  {jobs.map((job, i) => {
+                    const appStatus = getAppStatus(job.id);
+                    const isApplied = !!appStatus;
+                    return (
+                      <div key={job.id} className="job-card a-slide" style={{ animationDelay: `${i * 0.06}s` }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(249,115,22,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                            {getJobEmoji(job.id)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h3 className="job-title">{job.title}</h3>
+                            <div style={{ fontSize: 12, color: '#9e9b94', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>{selectedCompany.name}</span>
+                              <span>·</span>
+                              <span>{timeAgo(job.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="job-meta">
+                          <span className="job-tag" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            {job.location}
+                          </span>
+                          <span className="job-tag">{job.type}</span>
+                          {job.tags?.slice(0, 2).map(t => (
+                            <span key={t} style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: 'rgba(249,115,22,.08)', color: '#d45e00' }}>{t}</span>
+                          ))}
+                        </div>
+
+                        {job.description && (
+                          <p style={{ fontSize: 12, color: '#6b6860', lineHeight: 1.6, margin: '0 0 12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {job.description}
+                          </p>
+                        )}
+
+                        {job.salary && (
+                          <div className="job-salary">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {job.salary}
+                          </div>
+                        )}
+
+                        <button
+                          className={`apply-btn${isApplied ? ' applied' : ''}`}
+                          onClick={() => !isApplied && handleApply(job.id, job.title)}
+                          disabled={isApplied || applying === job.id}
+                        >
+                          {applying === job.id ? (
+                            <span className="spin-el" />
+                          ) : isApplied ? (
+                            <>
+                              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 13l4 4L19 7"/></svg>
+                              {appStatus?.status === 'accepted' ? 'Accepted!' : appStatus?.status === 'rejected' ? 'Not selected' : 'Applied'}
+                            </>
+                          ) : (
+                            <>
+                              Apply Now
+                              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
