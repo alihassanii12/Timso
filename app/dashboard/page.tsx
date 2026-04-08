@@ -166,13 +166,15 @@ interface PostJobForm { title: string; description: string; location: string; ty
 
 /* ══ NAV ══ */
 const NAV_ALL = [
-  { id: 'overview', label: 'Overview', adminOnly: false, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { id: 'team', label: 'Team', adminOnly: false, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-  { id: 'tasks', label: 'Tasks', adminOnly: false, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-  { id: 'findjob', label: 'Find Job', adminOnly: false, icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-  { id: 'analytics', label: 'Analytics', adminOnly: true, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { id: 'manage', label: 'Manage Team', adminOnly: true, icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-  { id: 'settings', label: 'Settings', adminOnly: false, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+  { id: 'overview',     label: 'Overview',      adminOnly: false, icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'team',         label: 'Team',           adminOnly: false, icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
+  { id: 'tasks',        label: 'Tasks',          adminOnly: false, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+  { id: 'findjob',      label: 'Find Job',       adminOnly: false, icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z', userOnly: true },
+  { id: 'postjob',      label: 'Post Job',       adminOnly: true,  icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', externalLink: '/admin/jobs' },
+  { id: 'applications', label: 'Applications',   adminOnly: true,  icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', externalLink: '/admin/applications' },
+  { id: 'analytics',    label: 'Analytics',      adminOnly: true,  icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { id: 'manage',       label: 'Manage Team',    adminOnly: true,  icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+  { id: 'settings',     label: 'Settings',       adminOnly: false, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ];
 
 const AVATAR_COLORS = ['#f97316', '#a89fff', '#fbbf24', '#34d399', '#fb7185', '#60a5fa', '#c084fc', '#f43f5e', '#38bdf8', '#4ade80'];
@@ -778,7 +780,11 @@ function Dashboard() {
   // useEffect(() => { ... socket.on ... }, [socket]);
 
   const isAdmin = user?.role === 'admin';
-  const NAV = NAV_ALL.filter(n => !n.adminOnly || isAdmin);
+  const NAV = NAV_ALL.filter(n => {
+    if (n.adminOnly && !isAdmin) return false;
+    if ((n as { userOnly?: boolean }).userOnly && isAdmin) return false;
+    return true;
+  });
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -962,12 +968,14 @@ function Dashboard() {
           <nav style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text3)', padding: '0 16px 12px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Menu</div>
             {NAV.map(item => (
-              <button key={item.id} onClick={() => setActiveNav(item.id)} className={`nav-item ${activeNav === item.id ? 'active' : ''}`}>
+              <button key={item.id}
+                onClick={() => {
+                  const ext = (item as { externalLink?: string }).externalLink;
+                  if (ext) { router.push(ext); } else { setActiveNav(item.id); }
+                }}
+                className={`nav-item ${activeNav === item.id ? 'active' : ''}`}>
                 <NavIcon id={item.id} />
                 {item.label}
-                {item.id === 'findjob' && (
-                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 900, padding: '2px 7px', borderRadius: 100, background: 'linear-gradient(135deg,#f97316,#ef4444)', color: '#fff', letterSpacing: '.05em' }}>NEW</span>
-                )}
               </button>
             ))}
           </nav>
@@ -1049,9 +1057,10 @@ function Dashboard() {
                           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           Update My Status
                         </button>
-                        <button className="btn-primary" style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.2)' }} onClick={() => setActiveNav('findjob')}>
+                        <button className="btn-primary" style={{ background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.2)' }}
+                          onClick={() => isAdmin ? router.push('/admin/jobs') : setActiveNav('findjob')}>
                           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                          Browse Jobs
+                          {isAdmin ? 'Post Job' : 'Browse Jobs'}
                         </button>
                       </div>
                     </div>
