@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { SocketProvider, useSocket } from '../SocketProvider';
+import { useSSE } from '../hooks/useSSE';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
@@ -734,6 +735,227 @@ function FindJobSection({ isAdmin, hasCompany, dark }: { isAdmin: boolean; hasCo
   );
 }
 
+/* ══ MANAGE TEAM SECTION ══ */
+function ManageTeamSection({ user, showToast }: { user: User | null; showToast: (m: string, t?: 'success' | 'error') => void }) {
+  const [members, setMembers] = useState<(User & { is_active?: boolean; last_login?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState<number | string | null>(null);
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/api/admin/company/members`, { withCredentials: true });
+      setMembers(r.data?.users || []);
+    } catch { setMembers([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
+
+  const handleRemove = async (userId: number | string, name: string) => {
+    if (!confirm(`Remove ${name} from your company?`)) return;
+    setRemoving(userId);
+    try {
+      await axios.patch(`${API}/api/admin/company/members/${userId}/remove`, {}, { withCredentials: true });
+      showToast(`${name} removed from company`);
+      fetchMembers();
+    } catch { showToast('Failed to remove member', 'error'); }
+    finally { setRemoving(null); }
+  };
+
+  const COLORS = ['#f97316','#a89fff','#fbbf24','#34d399','#fb7185','#60a5fa'];
+  const getColor = (id: number | string) => COLORS[Number(id) % COLORS.length];
+  const getInitials = (name?: string) => (name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <div>
+      <SectionHeader
+        title="Manage Team"
+        subtitle={`${members.length} member${members.length !== 1 ? 's' : ''} in your company`}
+        action={
+          <button onClick={fetchMembers} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border2)', background: 'var(--card)', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: 'var(--text2)', fontFamily: 'Outfit,sans-serif', transition: 'all .2s' }}>
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        }
+      />
+
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1,2,3].map(i => (
+            <div key={i} className="card" style={{ padding: '16px 20px', display: 'flex', gap: 14 }}>
+              <div className="sk" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><div className="sk" style={{ height: 14, width: '40%', marginBottom: 8 }} /><div className="sk" style={{ height: 11, width: '60%' }} /></div>
+            </div>
+          ))}
+        </div>
+      ) : members.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 40px', background: 'var(--card)', border: '1.5px dashed var(--border2)', borderRadius: 24 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontSize: 20, fontWeight: 900, margin: '0 0 8px' }}>No members yet</h3>
+          <p style={{ color: 'var(--text3)', margin: 0, fontSize: 14 }}>Accept job applications to add members to your company.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {members.map((member, i) => (
+            <div key={member.id} className="card a-rise" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 0.04}s` }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: getColor(member.id!), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15, fontWeight: 900, color: '#fff', overflow: 'hidden', position: 'relative' }}>
+                {member.profile_picture ? (
+                  <img src={member.profile_picture} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : getInitials(member.full_name || member.username)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800 }}>{member.full_name || member.username}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: member.role === 'admin' ? 'linear-gradient(135deg,#f97316,#ef4444)' : 'var(--hover)', color: member.role === 'admin' ? '#fff' : 'var(--text3)' }}>{member.role}</span>
+                  {member.is_active === false && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Inactive</span>}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text3)' }}>{member.email}</div>
+                {member.last_login && <div style={{ fontSize: 11, color: 'var(--text4)', marginTop: 2 }}>Last login: {new Date(member.last_login).toLocaleDateString()}</div>}
+              </div>
+              {String(member.id) !== String(user?.id) && (
+                <button
+                  onClick={() => handleRemove(member.id!, member.full_name || member.username || 'User')}
+                  disabled={removing === member.id}
+                  style={{ padding: '7px 14px', borderRadius: 10, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'Outfit,sans-serif', transition: 'all .2s', flexShrink: 0 }}
+                >
+                  {removing === member.id ? '…' : 'Remove'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ SETTINGS SECTION ══ */
+function SettingsSection({ user, setUser, showToast, dark }: { user: User | null; setUser: (u: User) => void; showToast: (m: string, t?: 'success' | 'error') => void; dark: boolean }) {
+  const [form, setForm] = useState({ fullName: user?.full_name || user?.fullname || '', username: user?.username || '' });
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [saving, setSaving] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleProfileSave = async () => {
+    setSaving(true);
+    try {
+      const r = await axios.put(`${API}/api/auth/profile`, { fullName: form.fullName, username: form.username }, { withCredentials: true });
+      if (r.data?.success) {
+        setUser({ ...user, full_name: form.fullName, username: form.username } as User);
+        showToast('Profile updated!');
+      }
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      showToast(ax?.response?.data?.message || 'Failed to update', 'error');
+    } finally { setSaving(false); }
+  };
+
+  const handlePasswordChange = async () => {
+    if (pwForm.newPassword !== pwForm.confirmPassword) { showToast('Passwords do not match', 'error'); return; }
+    if (pwForm.newPassword.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
+    setSavingPw(true);
+    try {
+      await axios.put(`${API}/api/auth/change-password`, { currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }, { withCredentials: true });
+      showToast('Password changed!');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      showToast(ax?.response?.data?.message || 'Failed to change password', 'error');
+    } finally { setSavingPw(false); }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('avatar', file);
+      const r = await axios.post(`${API}/api/avatar/upload`, fd, { withCredentials: true, headers: { 'Content-Type': 'multipart/form-data' } });
+      if (r.data?.success) {
+        setUser({ ...user, profile_picture: r.data.data.avatar_url } as User);
+        showToast('Avatar updated!');
+      }
+    } catch { showToast('Failed to upload avatar', 'error'); }
+    finally { setUploading(false); }
+  };
+
+  const COLORS = ['#f97316','#a89fff','#fbbf24','#34d399','#fb7185','#60a5fa'];
+  const getInitials = (name?: string) => (name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const avatarColor = COLORS[Number(user?.id || 0) % COLORS.length];
+
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <SectionHeader title="Settings" subtitle="Manage your account and preferences" />
+
+      {/* Avatar */}
+      <div className="card" style={{ padding: 28, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text2)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '.06em' }}>Profile Picture</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 900, color: '#fff', overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+            {user?.profile_picture ? (
+              <img src={user.profile_picture} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : getInitials(user?.full_name || user?.username)}
+          </div>
+          <div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: 'var(--text)', color: 'var(--bg)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .2s' }}>
+              {uploading ? <span className="spin" /> : <><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Upload Photo</>}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+            </label>
+            <p style={{ fontSize: 12, color: 'var(--text3)', margin: '8px 0 0' }}>JPG, PNG or WebP. Max 2MB.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile info */}
+      <div className="card" style={{ padding: 28, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text2)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '.06em' }}>Profile Info</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label className="lbl">Full Name</label>
+            <input className="inp" value={form.fullName} onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))} placeholder="Your full name" />
+          </div>
+          <div>
+            <label className="lbl">Username</label>
+            <input className="inp" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder="username" />
+          </div>
+          <div>
+            <label className="lbl">Email</label>
+            <input className="inp" value={user?.email || ''} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }} />
+          </div>
+          <button className="btn-primary" onClick={handleProfileSave} disabled={saving} style={{ alignSelf: 'flex-start', cursor: 'pointer' }}>
+            {saving ? <span className="spin" /> : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+
+      {/* Change password */}
+      <div className="card" style={{ padding: 28 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text2)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '.06em' }}>Change Password</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label className="lbl">Current Password</label>
+            <input className="inp" type="password" value={pwForm.currentPassword} onChange={e => setPwForm(p => ({ ...p, currentPassword: e.target.value }))} placeholder="••••••••" />
+          </div>
+          <div>
+            <label className="lbl">New Password</label>
+            <input className="inp" type="password" value={pwForm.newPassword} onChange={e => setPwForm(p => ({ ...p, newPassword: e.target.value }))} placeholder="Min 8 characters" />
+          </div>
+          <div>
+            <label className="lbl">Confirm New Password</label>
+            <input className="inp" type="password" value={pwForm.confirmPassword} onChange={e => setPwForm(p => ({ ...p, confirmPassword: e.target.value }))} placeholder="Repeat new password" />
+          </div>
+          <button className="btn-primary" onClick={handlePasswordChange} disabled={savingPw || !pwForm.currentPassword || !pwForm.newPassword} style={{ alignSelf: 'flex-start', cursor: 'pointer' }}>
+            {savingPw ? <span className="spin" /> : 'Change Password'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const NavIcon = ({ id }: { id: string }) => {
   const item = NAV_ALL.find(n => n.id === id);
   if (!item) return null;
@@ -776,6 +998,15 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { isConnected } = useSocket();
+
+  // Real-time SSE — auto-update on events
+  useSSE({
+    task_assigned: () => { fetchTasks(); },
+    task_status_updated: () => { fetchTasks(); },
+    tasks_updated: () => { fetchTasks(); },
+    attendance_updated: () => { fetchTeam(true); },
+    activity_updated: () => { fetchActivity(); },
+  }, !!user?.id);
 
   // Socket.io disabled on Vercel — real-time notifications not available
   // useEffect(() => { ... socket.on ... }, [socket]);
@@ -1235,17 +1466,17 @@ function Dashboard() {
               {/* ── FIND JOB ── */}
               {activeNav === 'findjob' && <FindJobSection isAdmin={isAdmin} hasCompany={!!user?.company_id} dark={dark} />}
 
-              {/* ── ANALYTICS / MANAGE / SETTINGS (admin stubs) ── */}
-              {(activeNav === 'analytics' || activeNav === 'manage' || activeNav === 'settings') && (
+              {/* ── ANALYTICS / MANAGE / SETTINGS ── */}
+              {activeNav === 'analytics' && (
                 <div style={{ textAlign: 'center', padding: '80px 0' }}>
-                  <div style={{ fontSize: 64, marginBottom: 24 }} className="float">🚧</div>
-                  <SectionHeader
-                    title={`${NAV.find(n => n.id === activeNav)?.label} coming soon`}
-                    subtitle="We're working hard to bring this to your workspace."
-                  />
+                  <div style={{ fontSize: 64, marginBottom: 24 }} className="float">📊</div>
+                  <SectionHeader title="Analytics coming soon" subtitle="We're working hard to bring this to your workspace." />
                   <button className="btn-primary" onClick={() => setActiveNav('overview')}>Back to Overview</button>
                 </div>
               )}
+
+              {activeNav === 'manage' && isAdmin && <ManageTeamSection user={user} showToast={showToast} />}
+              {activeNav === 'settings' && <SettingsSection user={user} setUser={setUser} showToast={showToast} dark={dark} />}
 
             </div>
           </div>
