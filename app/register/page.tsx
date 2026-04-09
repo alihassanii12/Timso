@@ -238,8 +238,11 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.verce
 
       if (data?.requiresOtp) {
         router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
-      } else {
+      } else if (data?.user?.role === 'admin') {
         router.push('/dashboard');
+      } else {
+        // User role — always go to find-company first (they need to join a company)
+        router.push('/find-company');
       }
 
     } catch (err: unknown) {

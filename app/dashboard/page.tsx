@@ -839,23 +839,24 @@ function Dashboard() {
       .then(async r => {
         const d = r.data;
         const u = d?.user || d?.data?.user || d?.data || d || null;
-        if (u) {
-          // Redirect non-admin users without company to find-company
-          if (u.role !== 'admin' && !u.company_id) {
-            router.push('/find-company');
-            return;
-          }
-          // Fetch company name if user has company_id
-          if (u.company_id) {
-            try {
-              const cr = await axios.get(`${API}/api/companies`, { withCredentials: true });
-              const companies = cr.data?.companies || [];
-              const company = companies.find((c: { id: number | string; name: string }) => String(c.id) === String(u.company_id));
-              if (company) u.company_name = company.name;
-            } catch {}
-          }
-          setUser(u);
+        if (!u) { router.push('/login'); return; }
+
+        // Only redirect non-admin users without company
+        if (u.role !== 'admin' && !u.company_id) {
+          router.push('/find-company');
+          return;
         }
+
+        // Fetch company name
+        if (u.company_id) {
+          try {
+            const cr = await axios.get(`${API}/api/companies`, { withCredentials: true });
+            const companies = cr.data?.companies || [];
+            const company = companies.find((c: { id: number | string; name: string }) => String(c.id) === String(u.company_id));
+            if (company) u.company_name = company.name;
+          } catch {}
+        }
+        setUser(u);
       })
       .catch(() => router.push('/login'))
       .finally(() => setLdUser(false));
@@ -1257,16 +1258,31 @@ function Dashboard() {
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [checking, setChecking] = useState(true);
+
   useEffect(() => {
     setMounted(true);
     axios.get(`${API}/api/auth/me`, { withCredentials: true })
       .then(r => {
         const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-        if (u?.id) setUser(u);
+        if (!u?.id) { window.location.href = '/login'; return; }
+        // Non-admin without company → find-company
+        if (u.role !== 'admin' && !u.company_id) {
+          window.location.href = '/find-company';
+          return;
+        }
+        setUser(u);
+        setChecking(false);
       })
       .catch(() => { window.location.href = '/login'; });
   }, []);
-  if (!mounted) return null;
+
+  if (!mounted || checking) return (
+    <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#faf9f7' }}>
+      <div style={{ width: 20, height: 20, border: '2px solid rgba(0,0,0,.1)', borderTopColor: '#f97316', borderRadius: '50%', animation: 'spin .65s linear infinite' }} />
+    </div>
+  );
+
   return (
     <SocketProvider userId={user?.id}>
       <Dashboard />

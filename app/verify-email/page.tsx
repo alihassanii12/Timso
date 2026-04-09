@@ -178,17 +178,20 @@ function VerifyEmailContent() {
       }, { withCredentials: true });
 
       setSuccess(true);
-      // Check if user has a company, redirect accordingly
+      // Redirect based on role
+      // Admin → dashboard, user → find-company (they need to join a company)
       try {
         const r = await axios.get(`${BASE}/api/auth/me`, { withCredentials: true });
         const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-        if (u?.role === 'admin' || u?.company_id) {
+        if (u?.role === 'admin') {
+          setTimeout(() => router.push('/dashboard'), 1800);
+        } else if (u?.company_id) {
           setTimeout(() => router.push('/dashboard'), 1800);
         } else {
           setTimeout(() => router.push('/find-company'), 1800);
         }
       } catch {
-        setTimeout(() => router.push('/dashboard'), 1800);
+        setTimeout(() => router.push('/find-company'), 1800);
       }
 
     } catch (err: unknown) {
@@ -250,7 +253,7 @@ function VerifyEmailContent() {
                 </svg>
               </div>
               <h1 className="font-syne" style={{ fontWeight: 900, fontSize: 28, letterSpacing: '-1.5px', margin: '0 0 8px', color: '#0f0e0c' }}>Email verified!</h1>
-              <p style={{ fontSize: 15, color: '#6b6860', margin: '0 0 4px' }}>Taking you to dashboard…</p>
+              <p style={{ fontSize: 15, color: '#6b6860', margin: '0 0 4px' }}>Setting up your workspace…</p>
               <div style={{ width: 20, height: 20, border: '2px solid rgba(0,0,0,.1)', borderTopColor: '#f97316', borderRadius: '50%', animation: 'spin .65s linear infinite', margin: '16px auto 0' }} />
             </div>
           ) : (
