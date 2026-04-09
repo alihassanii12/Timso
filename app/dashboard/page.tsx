@@ -89,6 +89,7 @@ interface User {
   role?: string; avatar_color?: string; department?: string;
   profile_picture?: string;
   company_id?: number | string;
+  company_name?: string;
 }
 interface Application {
   id: number | string;
@@ -835,12 +836,20 @@ function Dashboard() {
     if (!mounted) return;
     setLdUser(true);
     axios.get(`${API}/api/auth/me`, { withCredentials: true })
-      .then(r => {
+      .then(async r => {
         const d = r.data;
         const u = d?.user || d?.data?.user || d?.data || d || null;
         if (u) {
+          // Fetch company name if user has company_id
+          if (u.company_id) {
+            try {
+              const cr = await axios.get(`${API}/api/companies`, { withCredentials: true });
+              const companies = cr.data?.companies || [];
+              const company = companies.find((c: { id: number | string; name: string }) => String(c.id) === String(u.company_id));
+              if (company) u.company_name = company.name;
+            } catch {}
+          }
           setUser(u);
-          // Users without company stay in dashboard — Find Job tab handles it
         }
       })
       .catch(() => router.push('/login'))
@@ -991,7 +1000,7 @@ function Dashboard() {
               <Avatar name={displayName} picture={user?.profile_picture} size={36} bg={user?.avatar_color} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isAdmin ? 'Admin' : 'Team Member'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isAdmin ? 'Admin' : user?.company_name ? user.company_name : 'Team Member'}</div>
               </div>
               {isAdmin && <div className="admin-badge">Admin</div>}
             </div>
@@ -1044,6 +1053,11 @@ function Dashboard() {
                     <div style={{ position: 'relative', zIndex: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                         <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'var(--accent)', color: '#fff', padding: '4px 12px', borderRadius: 100 }}>Welcome Back</span>
+                        {user?.company_name && (
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)', background: 'rgba(255,255,255,.12)', padding: '4px 12px', borderRadius: 100 }}>
+                            🏢 {user.company_name}
+                          </span>
+                        )}
                         <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.5)' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
                       </div>
                       <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, margin: 0, letterSpacing: '-2px', lineHeight: 1 }}>
