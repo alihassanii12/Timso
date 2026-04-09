@@ -142,21 +142,28 @@ export default function FindCompanyPage() {
 
   // Auth check + poll for acceptance
   useEffect(() => {
-    const checkUser = () => {
-      axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authH() })
-        .then(r => {
-          const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-          if (!u) { router.push('/login'); return; }
-          if (u?.role === 'admin') { router.push('/dashboard'); return; }
-          // If accepted into a company → go to dashboard
-          if (u?.company_id) { router.push('/dashboard'); return; }
-        })
-        .catch(() => router.push('/login'));
+    let interval: ReturnType<typeof setInterval>;
+
+    const checkUser = async () => {
+      try {
+        const r = await axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authH() });
+        const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
+        if (!u) { router.push('/login'); return; }
+        if (u?.role === 'admin') { router.push('/dashboard'); return; }
+        // If accepted into a company → go to dashboard
+        if (u?.company_id) {
+          clearInterval(interval);
+          router.push('/dashboard');
+          return;
+        }
+      } catch {
+        router.push('/login');
+      }
     };
 
     checkUser();
     // Poll every 15s to detect acceptance
-    const interval = setInterval(checkUser, 15000);
+    interval = setInterval(checkUser, 15000);
     return () => clearInterval(interval);
   }, [router]);
 
