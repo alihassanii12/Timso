@@ -215,18 +215,37 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:14}}>
-                {[
-                  {label:'My Tasks',value:tasks.length,color:'#f97316',bg:'#fff7ed',border:'#fed7aa'},
-                  {label:'In Progress',value:tasks.filter(t=>t.status==='in_progress').length,color:'#7c3aed',bg:'#f5f3ff',border:'#ddd6fe'},
-                  {label:'Completed',value:tasks.filter(t=>t.status==='done').length,color:'#16a34a',bg:'#f0fdf4',border:'#bbf7d0'},
-                  {label:'Team Online',value:team.filter(m=>m.status==='office'||m.status==='remote').length,color:'#2563eb',bg:'#eff6ff',border:'#bfdbfe'},
-                ].map(s=>(
-                  <div key={s.label} style={{background:s.bg,border:`1.5px solid ${s.border}`,borderRadius:16,padding:'20px 22px'}}>
-                    <div style={{fontSize:13,fontWeight:600,color:'#666',marginBottom:8}}>{s.label}</div>
-                    <div style={{fontSize:36,fontWeight:900,color:s.color,lineHeight:1}}>{s.value}</div>
+              <div style={{...S.card}}>
+                <div style={{padding:'12px 16px',borderBottom:'1px solid #f5f5f5',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div>
+                    <span style={{fontSize:14,fontWeight:800,color:'#111'}}>Online Now</span>
+                    <span style={{marginLeft:8,fontSize:12,color:'#aaa'}}>{team.filter(m=>m.status==='office'||m.status==='remote').length} of {team.length}</span>
                   </div>
-                ))}
+                  <button onClick={()=>fetchTeam(true)} style={{...S.btnGhost,padding:'5px 12px',fontSize:12}}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" style={{animation:refreshing?'spin .6s linear infinite':'none'}}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh
+                  </button>
+                </div>
+                {ldTeam?
+                  <div style={{padding:'14px 16px',display:'flex',gap:8}}>{[1,2,3].map(i=><div key={i} style={{width:32,height:32,borderRadius:'50%',background:'#f0f0f0'}}/>)}</div>:
+                  team.filter(m=>m.status==='office'||m.status==='remote').length===0?
+                  <div style={{padding:'20px',textAlign:'center',color:'#aaa',fontSize:13}}>No one online right now</div>:
+                  <div style={{padding:'10px 16px',display:'flex',flexDirection:'column',gap:0}}>
+                    {team.filter(m=>m.status==='office'||m.status==='remote').map(m=>(
+                      <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #f8f8f8'}}>
+                        <div style={{position:'relative',flexShrink:0}}>
+                          <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={32}/>
+                          <div style={{position:'absolute',bottom:0,right:0,width:8,height:8,borderRadius:'50%',background:STATUS_COLOR[m.status||'away'],border:'2px solid #fff'}}/>
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:'#111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||m.full_name||m.username}</div>
+                          <div style={{fontSize:11,color:'#aaa'}}>{m.job_role||m.role||'Member'}</div>
+                        </div>
+                        <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:STATUS_BG[m.status||'away'],color:STATUS_COLOR[m.status||'away']}}>{STATUS_LBL[m.status||'away']}</span>
+                      </div>
+                    ))}
+                  </div>
+                }
               </div>
 
               {tasks.filter(t=>t.status!=='done').length>0&&(
@@ -426,20 +445,20 @@ function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:Use
   const save = async()=>{setSaving(true);try{const r=await axios.put(`${API}/api/auth/profile`,{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
   const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(`${API}/api/auth/change-password`,{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(`${API}/api/avatar/upload`,fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
-  const inp = {width:'100%',border:'1.5px solid #e0e0e0',borderRadius:10,padding:'11px 14px',fontSize:14,fontFamily:'Outfit,sans-serif',outline:'none',boxSizing:'border-box' as const,background:'#fff',color:'#111'};
-  const lbl = {fontSize:13,fontWeight:700 as const,color:'#555',display:'block' as const,marginBottom:6};
-  const card = {background:'#fff',borderBottom:'1.5px solid #f0f0f0',padding:'24px 28px',marginBottom:0};
+  const inp = {border:'1px solid #e5e5e5',borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:'#fff',color:'#111',width:'100%',boxSizing:'border-box' as const};
+  const lbl = {fontSize:12,fontWeight:700 as const,color:'#666',display:'block' as const,marginBottom:5};
+  const card = {background:'#fff',border:'1px solid #efefef',borderRadius:14,padding:'20px',marginBottom:12};
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:0,height:'100%'}}>
-      <div style={{fontSize:20,fontWeight:800,color:'#111',padding:'24px 28px',borderBottom:'1.5px solid #f0f0f0',marginBottom:0}}>Settings</div>
+    <div style={{maxWidth:460,margin:'0 auto'}}>
+      <div style={{fontSize:18,fontWeight:800,color:'#111',marginBottom:16}}>Settings</div>
       <div style={card}>
         <div style={{fontSize:12,fontWeight:800,color:'#aaa',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:16}}>Profile Picture</div>
         <div style={{display:'flex',alignItems:'center',gap:18}}>
-          <div style={{width:68,height:68,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(user?.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(0,0,0,.1)',flexShrink:0}}>
+          <div style={{width:56,height:56,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(user?.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
             {user?.profile_picture&&(user.profile_picture.startsWith('data:')||user.profile_picture.startsWith('http'))&&<img src={user.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
-            <span style={{fontSize:24,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
+            <span style={{fontSize:18,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
           </div>
-          <label style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 20px',borderRadius:10,background:'#111',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}}>
+          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
             {uploading?'Uploading...':'Upload Photo'}
             <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
           </label>
@@ -451,7 +470,7 @@ function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:Use
           <div><label style={lbl}>Full Name</label><input style={inp} value={form.fullName} onChange={e=>setForm(p=>({...p,fullName:e.target.value}))} placeholder="Your name"/></div>
           <div><label style={lbl}>Username</label><input style={inp} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="username"/></div>
           <div><label style={lbl}>Email</label><input style={{...inp,opacity:.5,cursor:'not-allowed'}} value={user?.email||''} disabled/></div>
-          <button onClick={save} disabled={saving} style={{alignSelf:'flex-start',padding:'11px 22px',borderRadius:10,border:'none',background:'#111',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>{saving?'Saving...':'Save Changes'}</button>
+          <button onClick={save} disabled={saving} style={{alignSelf:'flex-start',padding:'8px 18px',borderRadius:8,border:'none',background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>{saving?'Saving...':'Save Changes'}</button>
         </div>
       </div>
       <div style={card}>
@@ -460,11 +479,12 @@ function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:Use
           <div><label style={lbl}>Current Password</label><input type="password" style={inp} value={pw.cur} onChange={e=>setPw(p=>({...p,cur:e.target.value}))} placeholder="••••••••"/></div>
           <div><label style={lbl}>New Password</label><input type="password" style={inp} value={pw.new_} onChange={e=>setPw(p=>({...p,new_:e.target.value}))} placeholder="Min 8 chars"/></div>
           <div><label style={lbl}>Confirm Password</label><input type="password" style={inp} value={pw.conf} onChange={e=>setPw(p=>({...p,conf:e.target.value}))} placeholder="Repeat"/></div>
-          <button onClick={changePw} disabled={savingPw||!pw.cur||!pw.new_} style={{alignSelf:'flex-start',padding:'11px 22px',borderRadius:10,border:'none',background:'#111',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',opacity:(!pw.cur||!pw.new_)?0.4:1}}>{savingPw?'Changing...':'Change Password'}</button>
+          <button onClick={changePw} disabled={savingPw||!pw.cur||!pw.new_} style={{alignSelf:'flex-start',padding:'8px 18px',borderRadius:8,border:'none',background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',opacity:(!pw.cur||!pw.new_)?0.4:1}}>{savingPw?'Changing...':'Change Password'}</button>
         </div>
       </div>
     </div>
   );
 }
+
 
 
