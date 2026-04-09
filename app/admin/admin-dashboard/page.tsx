@@ -29,7 +29,7 @@ const setupAxios = () => {
 
 interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
-interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_by:number|string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; }
+interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_to_email?:string; assigned_to_username?:string; assigned_by:number|string; assigned_by_name?:string; assigned_to_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
 interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; }
 interface AssignableUser { id:number|string; full_name?:string; username?:string; }
 interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
@@ -123,6 +123,7 @@ export default function AdminDashboard() {
   const handleAssignTask = async (d:{title:string;description:string;assigned_to:string;priority:string;due_date:string}) => { setTaskLoading(true); try { await axios.post(`${API}/api/tasks`,d); showToast('Task assigned!'); setShowTask(false); fetchTasks(); } catch { showToast('Failed','error'); } finally { setTaskLoading(false); } };
   const handleApplication = async (id:number|string, status:'accepted'|'rejected') => { try { await axios.post(`${API}/api/companies/handle-application`,{applicationId:id,status}); showToast(`Application ${status}!`); fetchApplications(); fetchTeam(); } catch { showToast('Failed','error'); } };
   const handleDeleteTask = async (id:number|string) => { setDeletingTask(id); try { await axios.delete(`${API}/api/tasks/${id}`); fetchTasks(); showToast('Task deleted!'); } catch { showToast('Failed','error'); } finally { setDeletingTask(null); } };
+  const handleUpdateTaskStatus = async (id:number|string, status:'todo'|'in_progress'|'done') => { try { await axios.patch(`${API}/api/tasks/${id}/status`,{status}); fetchTasks(); } catch { showToast('Failed','error'); } };
   const logout = async () => { try{await axios.post(`${API}/api/auth/logout`,{});}catch{} clearTok(); router.push('/login'); };
 
   const name = user?.full_name||user?.username||'Admin';
@@ -321,23 +322,36 @@ export default function AdminDashboard() {
                   <div style={{fontSize:16,fontWeight:800,color:'#111',marginBottom:4}}>No tasks yet</div>
                   <div style={{fontSize:13,color:'#aaa'}}>Assign your first task to a team member</div>
                 </div>:
-              <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                {tasks.map(t=>(
-                  <div key={t.id} style={{...S.card,padding:'10px 14px',display:'flex',alignItems:'center',gap:10}}>
-                    <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,background:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]||'#ccc'}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:700,textDecoration:t.status==='done'?'line-through':'none',color:t.status==='done'?'#bbb':'#111'}}>{t.title}</div>
-                      <div style={{fontSize:11,color:'#aaa',marginTop:1}}>{t.assigned_to_name||'Team member'}</div>
+              <div style={{display:'flex',flexDirection:'column',gap:0,...S.card}}>
+                {tasks.map((t,i)=>{
+                  const tAgo=(d?:string)=>{if(!d)return'';try{const s=Math.floor((Date.now()-new Date(d).getTime())/1000);if(s<60)return`${s}s ago`;if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}catch{return'';}};
+                  const SBTN=(st:'todo'|'in_progress'|'done',label:string,col:string)=>(
+                    <button onClick={()=>handleUpdateTaskStatus(t.id,st)} style={{padding:'3px 10px',borderRadius:100,border:'none',background:t.status===st?col+'18':'transparent',color:t.status===st?col:'#bbb',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .12s'}}>{label}</button>
+                  );
+                  return (
+                    <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<tasks.length-1?'1px solid #f5f5f5':'none'}}>
+                      <Av name={t.assigned_to_name||t.assigned_to_username} pic={t.assigned_to_picture} size={36}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                          <span style={{fontSize:13,fontWeight:700,color:'#111',textDecoration:t.status==='done'?'line-through':'none'}}>{t.assigned_to_name||t.assigned_to_username||'Team member'}</span>
+                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{todo:'#f5f5f5',in_progress:'#fff7ed',done:'#f0fdf4'}[t.status],color:{todo:'#888',in_progress:'#f97316',done:'#16a34a'}[t.status]}}>{t.status==='in_progress'?'In Progress':t.status==='todo'?'To Do':'Done'}</span>
+                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{high:'#fef2f2',medium:'#fff7ed',low:'#f0fdf4'}[t.priority],color:{high:'#ef4444',medium:'#f97316',low:'#16a34a'}[t.priority]}}>{t.priority}</span>
+                        </div>
+                        <div style={{fontSize:12,color:'#555',fontWeight:600,marginBottom:1}}>{t.title}</div>
+                        <div style={{fontSize:11,color:'#bbb'}}>{t.assigned_to_email||t.assigned_to_username||''}</div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                        <span style={{fontSize:11,color:'#bbb',marginRight:6}}>{tAgo(t.created_at)}</span>
+                        {SBTN('todo','To Do','#888')}
+                        {SBTN('in_progress','In Progress','#f97316')}
+                        {SBTN('done','Done','#16a34a')}
+                        <button onClick={()=>handleDeleteTask(t.id)} disabled={deletingTask===t.id} style={{width:26,height:26,borderRadius:6,border:'none',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',marginLeft:4}}>
+                          {deletingTask===t.id?'…':<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>}
+                        </button>
+                      </div>
                     </div>
-                    <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:{todo:'#f5f5f5',in_progress:'#fff7ed',done:'#f0fdf4'}[t.status],color:{todo:'#888',in_progress:'#f97316',done:'#16a34a'}[t.status],flexShrink:0}}>
-                      {t.status==='in_progress'?'In Progress':t.status==='todo'?'To Do':'Done'}
-                    </span>
-                    <button onClick={()=>handleDeleteTask(t.id)} disabled={deletingTask===t.id} style={{width:28,height:28,borderRadius:7,border:'none',background:'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:13}}>
-                      {deletingTask===t.id?'…':
-                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>}
             </div>
           )}

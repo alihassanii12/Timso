@@ -29,7 +29,7 @@ const setupAxios = () => {
 
 interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
-interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_by:number|string; assigned_by_name?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; }
+interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_by:number|string; assigned_by_name?:string; assigned_by_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
 interface Job { id:number|string; title:string; company_name:string; location:string; type:string; salary?:string; tags:string[]; created_at:string; }
 interface JobApp { id:number|string; job_id:number|string; job_title?:string; company_name?:string; status:string; created_at:string; }
 interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
@@ -311,33 +311,45 @@ export default function UserDashboard() {
           {/* TASKS */}
           {nav==='tasks'&&(
             <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
                 <div>
-                  <div style={{fontSize:22,fontWeight:800,color:'#111'}}>My Tasks</div>
-                  <div style={{fontSize:14,color:'#888',marginTop:2}}>{tasks.filter(t=>t.status!=='done').length} open &middot; {tasks.filter(t=>t.status==='done').length} done</div>
+                  <div style={{fontSize:18,fontWeight:800,color:'#111'}}>My Tasks</div>
+                  <div style={{fontSize:13,color:'#aaa',marginTop:2}}>{tasks.filter(t=>t.status!=='done').length} open &middot; {tasks.filter(t=>t.status==='done').length} done</div>
                 </div>
               </div>
               {tasks.length===0?
-                <div style={{textAlign:'center',padding:'56px 24px',background:'#fff',border:'2px dashed #e5e5e5',borderRadius:18}}>
-                  <div style={{fontSize:48,marginBottom:14}}>📋</div>
-                  <div style={{fontSize:18,fontWeight:800,color:'#111',marginBottom:6}}>No tasks yet</div>
-                  <div style={{fontSize:14,color:'#888'}}>Your admin will assign tasks to you</div>
+                <div style={{textAlign:'center',padding:'48px 24px',background:'#fff',border:'1.5px dashed #e5e5e5',borderRadius:14}}>
+                  <div style={{fontSize:40,marginBottom:12}}>📋</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'#111',marginBottom:4}}>No tasks yet</div>
+                  <div style={{fontSize:13,color:'#aaa'}}>Your admin will assign tasks to you</div>
                 </div>:
-              <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                {tasks.map(t=>(
-                  <div key={t.id} style={{...S.card,padding:'10px 16px',display:'flex',alignItems:'center',gap:12}}>
-                    <div style={{width:10,height:10,borderRadius:'50%',flexShrink:0,background:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]||'#9ca3af'}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:700,textDecoration:t.status==='done'?'line-through':'none',color:t.status==='done'?'#aaa':'#111'}}>{t.title}</div>
-                      <div style={{fontSize:12,color:'#888',marginTop:1}}>by {t.assigned_by_name||'Admin'}{t.due_date?` · Due ${new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}</div>
+              <div style={{display:'flex',flexDirection:'column',gap:0,...S.card}}>
+                {tasks.map((t,i)=>{
+                  const tAgo=(d?:string)=>{if(!d)return'';try{const s=Math.floor((Date.now()-new Date(d).getTime())/1000);if(s<60)return`${s}s ago`;if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}catch{return'';}};
+                  const SBTN=(st:'todo'|'in_progress'|'done',label:string,col:string)=>(
+                    <button onClick={()=>handleUpdateTaskStatus(t.id,st)} style={{padding:'3px 10px',borderRadius:100,border:'none',background:t.status===st?col+'18':'transparent',color:t.status===st?col:'#bbb',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .12s'}}>{label}</button>
+                  );
+                  return (
+                    <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<tasks.length-1?'1px solid #f5f5f5':'none'}}>
+                      <Av name={t.assigned_by_name} pic={t.assigned_by_picture} size={36}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                          <span style={{fontSize:13,fontWeight:700,color:'#111'}}>{t.assigned_by_name||'Admin'}</span>
+                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{todo:'#f5f5f5',in_progress:'#fff7ed',done:'#f0fdf4'}[t.status],color:{todo:'#888',in_progress:'#f97316',done:'#16a34a'}[t.status]}}>{t.status==='in_progress'?'In Progress':t.status==='todo'?'To Do':'Done'}</span>
+                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{high:'#fef2f2',medium:'#fff7ed',low:'#f0fdf4'}[t.priority],color:{high:'#ef4444',medium:'#f97316',low:'#16a34a'}[t.priority]}}>{t.priority}</span>
+                        </div>
+                        <div style={{fontSize:12,color:'#555',fontWeight:600,marginBottom:1,textDecoration:t.status==='done'?'line-through':'none'}}>{t.title}</div>
+                        {t.due_date&&<div style={{fontSize:11,color:'#bbb'}}>Due {new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                        <span style={{fontSize:11,color:'#bbb',marginRight:6}}>{tAgo(t.created_at)}</span>
+                        {SBTN('todo','To Do','#888')}
+                        {SBTN('in_progress','In Progress','#f97316')}
+                        {SBTN('done','Done','#16a34a')}
+                      </div>
                     </div>
-                    <select value={t.status} onChange={e=>handleUpdateTaskStatus(t.id,e.target.value as 'todo'|'in_progress'|'done')} style={{fontSize:13,fontWeight:600,padding:'7px 12px',borderRadius:8,border:'1.5px solid #e0e0e0',background:'#fff',cursor:'pointer',fontFamily:'Outfit,sans-serif',color:'#111'}}>
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </div>
-                ))}
+                  );
+                })}
               </div>}
             </div>
           )}
