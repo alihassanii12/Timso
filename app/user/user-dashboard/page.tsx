@@ -234,7 +234,7 @@ export default function UserDashboard() {
                   <div style={{fontSize:17,fontWeight:800,color:'#111',marginBottom:14}}>My Open Tasks</div>
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
                     {tasks.filter(t=>t.status!=='done').slice(0,4).map(t=>(
-                      <div key={t.id} style={{...S.card,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+                      <div key={t.id} style={{...S.card,padding:'10px 16px',display:'flex',alignItems:'center',gap:12}}>
                         <div style={{width:10,height:10,borderRadius:'50%',flexShrink:0,background:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]||'#9ca3af'}}/>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:15,fontWeight:700,color:'#111'}}>{t.title}</div>
@@ -271,8 +271,8 @@ export default function UserDashboard() {
                 {ldTeam?[1,2,3,4].map(i=><div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'16px 20px',borderBottom:'1.5px solid #f0f0f0'}}><div style={{width:44,height:44,borderRadius:'50%',background:'#f0f0f0',flexShrink:0}}/><div style={{flex:1}}><div style={{height:14,background:'#f0f0f0',borderRadius:6,width:'40%',marginBottom:8}}/><div style={{height:12,background:'#f0f0f0',borderRadius:6,width:'25%'}}/></div></div>):
                 team.length===0?<div style={{textAlign:'center',padding:48,color:'#888',fontSize:15}}>No team members yet</div>:
                 team.map(m=>(
-                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:14,padding:'16px 20px',borderBottom:'1.5px solid #f5f5f5'}}>
-                    <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={44}/>
+                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderBottom:'1px solid #f5f5f5'}}>
+                    <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={36}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:15,fontWeight:700,color:'#111'}}>{m.name||m.full_name||m.username}</div>
                       <div style={{fontSize:13,color:'#888',marginTop:2}}>{m.job_role||m.role||'Member'}{m.note?` · ${m.note}`:''}</div>
@@ -306,11 +306,11 @@ export default function UserDashboard() {
                 </div>:
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
                 {tasks.map(t=>(
-                  <div key={t.id} style={{...S.card,padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+                  <div key={t.id} style={{...S.card,padding:'10px 16px',display:'flex',alignItems:'center',gap:12}}>
                     <div style={{width:10,height:10,borderRadius:'50%',flexShrink:0,background:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]||'#9ca3af'}}/>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:700,textDecoration:t.status==='done'?'line-through':'none',color:t.status==='done'?'#aaa':'#111'}}>{t.title}</div>
-                      <div style={{fontSize:13,color:'#888',marginTop:2}}>by {t.assigned_by_name||'Admin'}{t.due_date?` · Due ${new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}</div>
+                      <div style={{fontSize:14,fontWeight:700,textDecoration:t.status==='done'?'line-through':'none',color:t.status==='done'?'#aaa':'#111'}}>{t.title}</div>
+                      <div style={{fontSize:12,color:'#888',marginTop:1}}>by {t.assigned_by_name||'Admin'}{t.due_date?` · Due ${new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}</div>
                     </div>
                     <select value={t.status} onChange={e=>handleUpdateTaskStatus(t.id,e.target.value as 'todo'|'in_progress'|'done')} style={{fontSize:13,fontWeight:600,padding:'7px 12px',borderRadius:8,border:'1.5px solid #e0e0e0',background:'#fff',cursor:'pointer',fontFamily:'Outfit,sans-serif',color:'#111'}}>
                       <option value="todo">To Do</option>
@@ -428,10 +428,10 @@ function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:Use
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(`${API}/api/avatar/upload`,fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
   const inp = {width:'100%',border:'1.5px solid #e0e0e0',borderRadius:10,padding:'11px 14px',fontSize:14,fontFamily:'Outfit,sans-serif',outline:'none',boxSizing:'border-box' as const,background:'#fff',color:'#111'};
   const lbl = {fontSize:13,fontWeight:700 as const,color:'#555',display:'block' as const,marginBottom:6};
-  const card = {background:'#fff',border:'1.5px solid #ebebeb',borderRadius:16,padding:'24px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,.04)'};
+  const card = {background:'#fff',borderBottom:'1.5px solid #f0f0f0',padding:'24px 28px',marginBottom:0};
   return (
-    <div style={{maxWidth:580}}>
-      <div style={{fontSize:22,fontWeight:800,color:'#111',marginBottom:20}}>Settings</div>
+    <div style={{display:'flex',flexDirection:'column',gap:0,height:'100%'}}>
+      <div style={{fontSize:20,fontWeight:800,color:'#111',padding:'24px 28px',borderBottom:'1.5px solid #f0f0f0',marginBottom:0}}>Settings</div>
       <div style={card}>
         <div style={{fontSize:12,fontWeight:800,color:'#aaa',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:16}}>Profile Picture</div>
         <div style={{display:'flex',alignItems:'center',gap:18}}>
@@ -466,3 +466,5 @@ function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:Use
     </div>
   );
 }
+
+
