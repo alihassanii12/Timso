@@ -840,6 +840,11 @@ function Dashboard() {
         const d = r.data;
         const u = d?.user || d?.data?.user || d?.data || d || null;
         if (u) {
+          // Redirect non-admin users without company to find-company
+          if (u.role !== 'admin' && !u.company_id) {
+            router.push('/find-company');
+            return;
+          }
           // Fetch company name if user has company_id
           if (u.company_id) {
             try {

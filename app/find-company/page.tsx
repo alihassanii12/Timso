@@ -140,16 +140,24 @@ export default function FindCompanyPage() {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
   };
 
-  // Auth check
+  // Auth check + poll for acceptance
   useEffect(() => {
-    axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authH() })
-      .then(r => {
-        const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
-        if (!u) router.push('/login');
-        // Admin should not be here
-        if (u?.role === 'admin') router.push('/dashboard');
-      })
-      .catch(() => router.push('/login'));
+    const checkUser = () => {
+      axios.get(`${API}/api/auth/me`, { withCredentials: true, headers: authH() })
+        .then(r => {
+          const u = r.data?.user || r.data?.data?.user || r.data?.data || r.data;
+          if (!u) { router.push('/login'); return; }
+          if (u?.role === 'admin') { router.push('/dashboard'); return; }
+          // If accepted into a company → go to dashboard
+          if (u?.company_id) { router.push('/dashboard'); return; }
+        })
+        .catch(() => router.push('/login'));
+    };
+
+    checkUser();
+    // Poll every 15s to detect acceptance
+    const interval = setInterval(checkUser, 15000);
+    return () => clearInterval(interval);
   }, [router]);
 
   // Fetch companies
@@ -309,6 +317,19 @@ export default function FindCompanyPage() {
 
         {/* ── RIGHT PANEL: Jobs ── */}
         <div className="right-panel">
+          {/* Pending applications banner */}
+          {myApplications.length > 0 && (
+            <div style={{ background: 'rgba(249,115,22,.06)', borderBottom: '1px solid rgba(249,115,22,.15)', padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#f97316" strokeWidth="2.2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#d45e00' }}>
+                {myApplications.filter(a => a.status === 'applied').length > 0
+                  ? `${myApplications.filter(a => a.status === 'applied').length} application(s) pending review — you'll be redirected automatically when accepted`
+                  : myApplications.filter(a => a.status === 'accepted').length > 0
+                  ? '✓ Application accepted! Redirecting to dashboard…'
+                  : 'You have applied to jobs — waiting for admin review'}
+              </span>
+            </div>
+          )}
           {!selectedCompany ? (
             <div className="empty-right">
               <div style={{ fontSize: 72, marginBottom: 20 }}>👈</div>
