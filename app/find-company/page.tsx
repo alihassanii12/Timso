@@ -40,23 +40,35 @@ export default function FindCompanyPage() {
 
   const showToast = (msg:string, type:'success'|'error'='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
+  // Initial load — only runs once
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    const checkUser = async () => {
+    const loadUser = async () => {
       try {
         const r = await axios.get(`${API}/api/auth/me`, {withCredentials:true, headers:authH()});
         const u = r.data?.user||r.data?.data?.user||r.data?.data||r.data;
         if (!u) { router.push('/login'); return; }
         if (u?.role==='admin') { router.push('/admin/admin-dashboard'); return; }
-        if (u?.company_id) { clearInterval(interval); router.push('/user/user-dashboard'); return; }
+        if (u?.company_id) { router.push('/user/user-dashboard'); return; }
         setUser(u);
         setProfileForm({ fullName:u.full_name||'', username:u.username||'', phone:u.phone_number||'', location:u.location||'', bio:u.bio||'', skills:u.skills||'', experience:u.experience||'', cvUrl:u.cv_url||'' });
       } catch { router.push('/login'); }
     };
-    checkUser();
-    interval = setInterval(checkUser, 15000);
+    loadUser();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Poll only for company_id acceptance — does NOT touch form state
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const r = await axios.get(`${API}/api/auth/me`, {withCredentials:true, headers:authH()});
+        const u = r.data?.user||r.data?.data?.user||r.data?.data||r.data;
+        if (u?.company_id) { clearInterval(interval); router.push('/user/user-dashboard'); }
+      } catch {}
+    }, 15000);
     return () => clearInterval(interval);
-  }, [router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchCompanies = useCallback(async () => {
     try { const r=await axios.get(`${API}/api/companies`,{withCredentials:true,headers:authH()}); setCompanies(r.data?.companies||[]); }
