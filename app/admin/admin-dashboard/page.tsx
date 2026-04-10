@@ -91,7 +91,7 @@ const SL:{[k:string]:string} = {office:'In Office',remote:'Remote',away:'Away'};
 export default function AdminDashboard() {
   const router = useRouter();
   const [nav, setNav] = useState('overview');
-  const [dark, setDark] = useState(() => { try { return localStorage.getItem('timso_dark')==='1'; } catch { return false; } });
+  const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -111,6 +111,7 @@ export default function AdminDashboard() {
   const T = mkS(dark);
   const showToast = (msg:string, type:'success'|'error'='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
   useEffect(() => { setupAxios(); }, []);
+  useEffect(() => { try { setDark(localStorage.getItem('timso_dark')==='1'); } catch {} }, []);
 
   useEffect(() => {
     axios.get(`${API}/api/auth/me`).then(async r => {
