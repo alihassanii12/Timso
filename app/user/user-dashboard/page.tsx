@@ -1,5 +1,5 @@
 ﻿'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useSSE } from '../../hooks/useSSE';
@@ -29,21 +29,25 @@ const setupAxios = () => {
 
 interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
-interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_by:number|string; assigned_by_name?:string; assigned_by_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
+interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_to_email?:string; assigned_to_username?:string; assigned_by:number|string; assigned_by_name?:string; assigned_to_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
+interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; }
+interface AssignableUser { id:number|string; full_name?:string; username?:string; }
+interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
 interface Job { id:number|string; title:string; company_name:string; location:string; type:string; salary?:string; tags:string[]; created_at:string; }
 interface JobApp { id:number|string; job_id:number|string; job_title?:string; company_name?:string; status:string; created_at:string; }
-interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
+interface Member { id:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; is_active?:boolean; }
 
 const COLORS = ['#f97316','#a78bfa','#fbbf24','#34d399','#fb7185','#60a5fa'];
 const getColor = (id:number|string) => COLORS[Number(id)%COLORS.length];
 const getInit = (n?:string) => (n||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const tAgo = (d?:string) => { if(!d) return ''; try { const s=Math.floor((Date.now()-new Date(d).getTime())/1000); if(s<60) return `${s}s ago`; if(s<3600) return `${Math.floor(s/60)}m ago`; if(s<86400) return `${Math.floor(s/3600)}h ago`; return `${Math.floor(s/86400)}d ago`; } catch { return ''; } };
 const LS_KEY = 'timso_att';
 const getAtt = ():AttendanceRecord => { try{const v=localStorage.getItem(LS_KEY);return v?JSON.parse(v):{status:'office',note:'',since:'--'};}catch{return{status:'office',note:'',since:'--'};} };
 const saveAtt = (s:'office'|'remote'|'away',note:string):AttendanceRecord => { const r={status:s,note,since:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}; try{localStorage.setItem(LS_KEY,JSON.stringify(r));}catch{} return r; };
 
-const Av = ({name,pic,size=40}:{name?:string;pic?:string;size?:number}) => {
+const Av = ({name,pic,size=36,dark=false}:{name?:string;pic?:string;size?:number;dark?:boolean}) => {
   const src = pic&&(pic.startsWith('data:')||pic.startsWith('http'))?pic:null;
-  return <div style={{width:size,height:size,borderRadius:'50%',flexShrink:0,overflow:'hidden',position:'relative',background:getColor(name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(0,0,0,.1)'}}>
+  return <div style={{width:size,height:size,borderRadius:'50%',flexShrink:0,overflow:'hidden',position:'relative',background:getColor(name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',boxShadow:dark?'0 0 0 2px #333':'0 0 0 2px #f0f0f0'}}>
     {src&&<img src={src} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>}
     <span style={{fontSize:size*0.35,fontWeight:800,color:'#fff',lineHeight:1,position:'relative',zIndex:src?-1:0}}>{getInit(name)}</span>
   </div>;
@@ -57,45 +61,62 @@ const NAV = [
   {id:'settings',label:'Settings',icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z'},
 ];
 
-const S = {
-  sidebar: {width:260,height:'100vh',background:'#ffffff',borderRight:'2px solid #f0f0f0',display:'flex',flexDirection:'column' as const,flexShrink:0,overflow:'hidden'},
-  navItem: (active:boolean)=>({display:'flex',alignItems:'center',gap:12,width:'100%',padding:'11px 14px',borderRadius:12,border:'none',background:active?'#111':'transparent',color:active?'#fff':'#444',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .15s',marginBottom:3,textAlign:'left' as const}),
-  card: {background:'#fff',border:'1.5px solid #ebebeb',borderRadius:16,overflow:'hidden' as const,boxShadow:'0 1px 4px rgba(0,0,0,.04)'},
-  btn: {background:'#111',color:'#fff',border:'none',borderRadius:10,padding:'10px 20px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',display:'inline-flex',alignItems:'center',gap:8,transition:'all .2s'},
-  btnGhost: {background:'#fff',color:'#111',border:'1.5px solid #ddd',borderRadius:10,padding:'10px 20px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'Outfit,sans-serif',display:'inline-flex',alignItems:'center',gap:8,transition:'all .2s'},
-  inp: {width:'100%',border:'1.5px solid #e0e0e0',borderRadius:10,padding:'11px 14px',fontSize:14,fontFamily:'Outfit,sans-serif',outline:'none',boxSizing:'border-box' as const,background:'#fff',color:'#111'},
-};
+const mkS = (dk:boolean) => ({
+  bg: dk?'#0f0f0f':'#f5f5f5',
+  sidebar: dk?'#161616':'#ffffff',
+  sidebarBorder: dk?'#2a2a2a':'#ebebeb',
+  header: dk?'#161616':'#ffffff',
+  headerBorder: dk?'#2a2a2a':'#ebebeb',
+  card: dk?'#1e1e1e':'#ffffff',
+  cardBorder: dk?'#2a2a2a':'#ebebeb',
+  text: dk?'#f0f0f0':'#111111',
+  textSub: dk?'#888':'#777',
+  textMuted: dk?'#555':'#aaa',
+  navActive: dk?'#f0f0f0':'#111111',
+  navActiveTxt: dk?'#111':'#ffffff',
+  navHover: dk?'rgba(255,255,255,.06)':'rgba(0,0,0,.04)',
+  input: dk?'#252525':'#ffffff',
+  inputBorder: dk?'#333':'#e0e0e0',
+  skeletonBg: dk?'#2a2a2a':'#f0f0f0',
+  btnPrimary: dk?'#f0f0f0':'#111111',
+  btnPrimaryTxt: dk?'#111':'#ffffff',
+  btnGhost: dk?'#252525':'#ffffff',
+  btnGhostBorder: dk?'#333':'#ddd',
+  btnGhostTxt: dk?'#ccc':'#333',
+  statusBadgeBg: (s:string) => s==='office'?(dk?'rgba(249,115,22,.2)':'#fff7ed'):s==='remote'?(dk?'rgba(124,58,237,.2)':'#f5f3ff'):(dk?'rgba(255,255,255,.06)':'#f5f5f5'),
+  statusBadgeTxt: (s:string) => s==='office'?'#f97316':s==='remote'?'#a78bfa':'#888',
+});
 
-const STATUS_COLOR:{[k:string]:string} = {office:'#f97316',remote:'#7c3aed',away:'#9ca3af'};
-const STATUS_BG:{[k:string]:string} = {office:'rgba(249,115,22,.1)',remote:'rgba(124,58,237,.1)',away:'rgba(0,0,0,.05)'};
-const STATUS_LBL:{[k:string]:string} = {office:'In Office',remote:'Remote',away:'Away'};
+const SC:{[k:string]:string} = {office:'#f97316',remote:'#a78bfa',away:'#888'};
+const SL:{[k:string]:string} = {office:'In Office',remote:'Remote',away:'Away'};
 
 export default function UserDashboard() {
   const router = useRouter();
   const [nav, setNav] = useState('overview');
+  const [dark, setDark] = useState(false);
   const [user, setUser] = useState<User|null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [myApps, setMyApps] = useState<JobApp[]>([]);
   const [myAtt, setMyAtt] = useState<AttendanceRecord>({status:'office',note:'',since:'--'});
   const [time, setTime] = useState('');
   const [toast, setToast] = useState<{msg:string;type:'success'|'error'}|null>(null);
   const [showAtt, setShowAtt] = useState(false);
   const [ldTeam, setLdTeam] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [deletingTask, setDeletingTask] = useState<number|string|null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [myApps, setMyApps] = useState<JobApp[]>([]);
   const [applying, setApplying] = useState<number|string|null>(null);
   const [jobSearch, setJobSearch] = useState('');
+  const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
+  const T = mkS(dark);
   const showToast = (msg:string, type:'success'|'error'='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
   useEffect(() => { setupAxios(); }, []);
 
   useEffect(() => {
     axios.get(`${API}/api/auth/me`).then(async r => {
       const u = r.data?.user||r.data?.data?.user||r.data?.data||r.data;
-      if (!u?.id) { window.location.href='/login'; return; }
-      if (u.role==='admin') { window.location.href='/admin/admin-dashboard'; return; }
-      if (!u.company_id) { window.location.href='/find-company'; return; }
+      if (!u?.id) { window.location.href='/login'; return; } if (u.role==='admin') { window.location.href='/admin/admin-dashboard'; return; } if (!u.company_id) { window.location.href='/find-company'; return; }
       if (u.company_id) { try { const cr=await axios.get(`${API}/api/companies`); const c=(cr.data?.companies||[]).find((x:{id:number|string;name:string})=>String(x.id)===String(u.company_id)); if(c) u.company_name=c.name; } catch {} }
       setUser(u);
     }).catch(()=>{ window.location.href='/login'; });
@@ -105,9 +126,9 @@ export default function UserDashboard() {
   useEffect(() => { setMyAtt(getAtt()); }, []);
 
   const fetchTeam = useCallback(async (silent=false) => {
-    if(!silent) setLdTeam(true); else setRefreshing(true);
+    if(!silent) setLdTeam(true);
     try { const r=await axios.get(`${API}/api/attendance/team`); const d=r.data?.data?.team||r.data?.team||r.data; if(Array.isArray(d)) setTeam(d.map((m:TeamMember)=>({...m,name:m.full_name||m.name||m.username||'Unknown',bg:getColor(m.id)}))); } catch { setTeam([]); }
-    finally { setLdTeam(false); setRefreshing(false); }
+    finally { setLdTeam(false); }
   }, []);
   const fetchTasks = useCallback(async () => { try { const r=await axios.get(`${API}/api/tasks`); const d=r.data?.data?.tasks||r.data?.data||r.data; if(Array.isArray(d)) setTasks(d); } catch {} }, []);
   const fetchJobs = useCallback(async () => { try { const r=await axios.get(`${API}/api/jobs`); setJobs(r.data?.data?.jobs||r.data?.jobs||[]); } catch {} }, []);
@@ -115,73 +136,67 @@ export default function UserDashboard() {
 
   useEffect(() => { fetchTeam(); fetchTasks(); fetchJobs(); fetchMyApps(); }, [fetchTeam, fetchTasks, fetchJobs, fetchMyApps]);
 
-  useSSE({
-    tasks_updated: () => fetchTasks(),
-    task_assigned: () => { fetchTasks(); showToast('New task assigned to you!'); },
-    attendance_updated: () => fetchTeam(true),
-    removed_from_company: () => { showToast('You have been removed from the company','error'); setTimeout(()=>{ window.location.href='/find-company'; },2000); },
-  }, !!user?.id);
+  // 30s polling for team attendance
+  useEffect(() => {
+    pollRef.current = setInterval(() => fetchTeam(true), 30000);
+    return () => { if(pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchTeam]);
 
-  const handleSaveAtt = async (status:'office'|'remote'|'away', note:string) => {
-    const r=saveAtt(status,note); setMyAtt(r);
-    try { await axios.post(`${API}/api/attendance`,{status,note}); fetchTeam(true); } catch {}
-    showToast('Status updated!');
-  };
-  const handleUpdateTaskStatus = async (taskId:number|string, status:'todo'|'in_progress'|'done') => {
-    try { await axios.patch(`${API}/api/tasks/${taskId}/status`,{status}); fetchTasks(); showToast('Task updated!'); }
-    catch { showToast('Failed','error'); }
-  };
-  const handleApplyJob = async (jobId:number|string, title:string) => {
-    setApplying(jobId);
-    try { await axios.post(`${API}/api/jobs/${jobId}/apply`,{}); showToast(`Applied to "${title}"!`); fetchMyApps(); }
-    catch(e:unknown) { const ax=e as {response?:{data?:{message?:string}}}; showToast(ax?.response?.data?.message||'Failed','error'); }
-    finally { setApplying(null); }
-  };
+  useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>{ fetchTasks(); showToast('New task assigned!'); }, attendance_updated: ()=>fetchTeam(true), removed_from_company: ()=>{ showToast('Removed from company','error'); setTimeout(()=>{ window.location.href='/find-company'; },2000); } }, !!user?.id);
+
+  const handleSaveAtt = async (status:'office'|'remote'|'away', note:string) => { const r=saveAtt(status,note); setMyAtt(r); try { await axios.post(`${API}/api/attendance`,{status,note}); fetchTeam(true); } catch {} showToast('Status updated!'); };
+  const handleDeleteTask = async (id:number|string) => { setDeletingTask(id); try { await axios.delete(`${API}/api/tasks/${id}`); fetchTasks(); showToast('Task deleted!'); } catch { showToast('Failed','error'); } finally { setDeletingTask(null); } };
+  const handleUpdateTaskStatus = async (id:number|string, status:'todo'|'in_progress'|'done') => { try { await axios.patch(`${API}/api/tasks/${id}/status`,{status}); fetchTasks(); } catch { showToast('Failed','error'); } };
+  const handleApplyJob = async (jobId:number|string, title:string) => { setApplying(jobId); try { await axios.post(`${API}/api/jobs/${jobId}/apply`,{}); showToast('Applied to '+title+'!'); fetchMyApps(); } catch(e:unknown) { const ax=e as {response?:{data?:{message?:string}}}; showToast(ax?.response?.data?.message||'Failed','error'); } finally { setApplying(null); } };
   const logout = async () => { try{await axios.post(`${API}/api/auth/logout`,{});}catch{} clearTok(); router.push('/login'); };
 
   const name = user?.full_name||user?.username||'User';
   const greet = () => { const h=new Date().getHours(); return h<12?'Good morning':h<17?'Good afternoon':'Good evening'; };
+  const onlineTeam = team.filter(m=>m.status==='office'||m.status==='remote');
   const getAppStatus = (jobId:number|string) => myApps.find(a=>String(a.job_id)===String(jobId));
   const filteredJobs = jobs.filter(j=>!jobSearch||j.title.toLowerCase().includes(jobSearch.toLowerCase())||j.company_name.toLowerCase().includes(jobSearch.toLowerCase()));
 
+  const navItemStyle = (a:boolean) => ({display:'flex',alignItems:'center',gap:10,width:'100%',padding:'9px 12px',borderRadius:10,border:'none',background:a?T.navActive:T.navHover,color:a?T.navActiveTxt:T.textSub,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .12s',marginBottom:2,textAlign:'left' as const});
+  const cardStyle = {background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:14,overflow:'hidden' as const};
+  const btnStyle = {background:T.btnPrimary,color:T.btnPrimaryTxt,border:'none',borderRadius:9,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',display:'inline-flex',alignItems:'center',gap:7,transition:'all .2s'};
+  const btnGhostStyle = {background:T.btnGhost,color:T.btnGhostTxt,border:`1px solid ${T.btnGhostBorder}`,borderRadius:9,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'Outfit,sans-serif',display:'inline-flex',alignItems:'center',gap:7,transition:'all .2s'};
+
   return (
-    <div style={{display:'flex',height:'100vh',overflow:'hidden',background:'#f8f8f8',fontFamily:'Outfit,sans-serif'}}>
-      {/* Toast */}
-      {toast&&<div style={{position:'fixed',bottom:24,right:24,zIndex:9999,padding:'13px 20px',borderRadius:14,fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:10,background:toast.type==='success'?'#111':'#ef4444',color:'#fff',boxShadow:'0 8px 32px rgba(0,0,0,.18)'}}>{toast.type==='success'?'✓':'✕'} {toast.msg}</div>}
-      {showAtt&&<AttModal current={myAtt} onSave={handleSaveAtt} onClose={()=>setShowAtt(false)}/>}
+    <div style={{display:'flex',height:'100vh',overflow:'hidden',background:T.bg,fontFamily:'Outfit,sans-serif',transition:'background .2s'}}>
+      {toast&&<div style={{position:'fixed',bottom:20,right:20,zIndex:9999,padding:'11px 18px',borderRadius:12,fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8,background:toast.type==='success'?T.btnPrimary:'#ef4444',color:toast.type==='success'?T.btnPrimaryTxt:'#fff',boxShadow:'0 6px 24px rgba(0,0,0,.2)'}}>{toast.type==='success'?'✓':'✕'} {toast.msg}</div>}
+      {showAtt&&<AttModal current={myAtt} onSave={handleSaveAtt} onClose={()=>setShowAtt(false)} dark={dark}/>}
 
       {/* SIDEBAR */}
-      <aside style={S.sidebar}>
-        <div style={{padding:'22px 20px 16px',display:'flex',alignItems:'center',gap:10,borderBottom:'2px solid #f0f0f0'}}>
-          <div style={{width:34,height:34,background:'#111',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:17,flexShrink:0}}>T</div>
-          <span style={{fontSize:18,fontWeight:900,letterSpacing:'-.5px',color:'#111'}}>timso</span>
-          {user?.company_name&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:700,color:'#888',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:90}}>{user.company_name}</span>}
+      <aside style={{width:236,height:'100vh',background:T.sidebar,borderRight:`1.5px solid ${T.sidebarBorder}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden',transition:'background .2s'}}>
+        <div style={{padding:'16px 14px 12px',display:'flex',alignItems:'center',gap:9,borderBottom:`1.5px solid ${T.sidebarBorder}`}}>
+          <div style={{width:30,height:30,background:T.btnPrimary,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:T.btnPrimaryTxt,fontWeight:900,fontSize:15,flexShrink:0}}>T</div>
+          <span style={{fontSize:16,fontWeight:900,letterSpacing:'-.4px',color:T.text}}>timso</span>
+          
         </div>
-
-        <nav style={{padding:'12px',flex:1,overflowY:'auto'}}>
-          <div style={{fontSize:11,fontWeight:800,color:'#bbb',padding:'6px 14px 10px',letterSpacing:'.08em',textTransform:'uppercase'}}>Menu</div>
+        <nav style={{padding:'10px',flex:1,overflowY:'auto'}}>
+          <div style={{fontSize:10,fontWeight:800,color:T.textMuted,padding:'5px 12px 8px',letterSpacing:'.08em',textTransform:'uppercase'}}>Menu</div>
           {NAV.map(item=>(
-            <button key={item.id} onClick={()=>setNav(item.id)} style={S.navItem(nav===item.id)}>
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon}/></svg>
+            <button key={item.id} onClick={()=>setNav(item.id)} style={navItemStyle(nav===item.id)}>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon}/></svg>
               {item.label}
             </button>
           ))}
-        </nav>
 
-        <div style={{padding:'14px',borderTop:'2px solid #f0f0f0'}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderRadius:10,background:STATUS_BG[myAtt.status],marginBottom:10}}>
-            <div style={{width:8,height:8,borderRadius:'50%',background:STATUS_COLOR[myAtt.status],flexShrink:0}}/>
-            <span style={{fontSize:13,fontWeight:700,color:STATUS_COLOR[myAtt.status]}}>{STATUS_LBL[myAtt.status]}</span>
+        </nav>
+        <div style={{padding:'12px',borderTop:`1.5px solid ${T.sidebarBorder}`}}>
+          <div style={{display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,background:T.statusBadgeBg(myAtt.status),marginBottom:8}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:SC[myAtt.status],flexShrink:0}}/>
+            <span style={{fontSize:12,fontWeight:700,color:SC[myAtt.status]}}>{SL[myAtt.status]}</span>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:12,background:'#f8f8f8',marginBottom:10}}>
-            <Av name={name} pic={user?.profile_picture} size={36}/>
+          <div style={{display:'flex',alignItems:'center',gap:9,padding:'8px 10px',borderRadius:10,background:dark?'#252525':'#f7f7f7',marginBottom:8}}>
+            <Av name={name} pic={user?.profile_picture} size={30} dark={dark}/>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#111'}}>{name}</div>
-              <div style={{fontSize:12,color:'#888'}}>{user?.company_name||'Team Member'}</div>
+              <div style={{fontSize:12,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:T.text}}>{name}</div>
+              <div style={{fontSize:11,color:T.textMuted}}>{user?.company_name||'Member'}</div>
             </div>
           </div>
-          <button onClick={logout} style={{width:'100%',textAlign:'left',padding:'9px 12px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:10,background:'none',border:'none',color:'#888',cursor:'pointer',borderRadius:10,fontFamily:'Outfit,sans-serif',transition:'all .15s'}}>
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <button onClick={logout} style={{width:'100%',textAlign:'left',padding:'7px 10px',fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:8,background:'none',border:'none',color:T.textMuted,cursor:'pointer',borderRadius:8,fontFamily:'Outfit,sans-serif'}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Logout
           </button>
         </div>
@@ -189,119 +204,95 @@ export default function UserDashboard() {
 
       {/* MAIN */}
       <main style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,overflow:'hidden'}}>
-        <header style={{height:64,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 32px',background:'#fff',borderBottom:'2px solid #f0f0f0',flexShrink:0}}>
-          <h1 style={{fontSize:20,fontWeight:800,margin:0,color:'#111',letterSpacing:'-.3px'}}>{NAV.find(n=>n.id===nav)?.label||nav}</h1>
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <span style={{fontSize:14,fontWeight:600,color:'#888'}}>{time}</span>
-            <button onClick={()=>setShowAtt(true)} style={{...S.btn,padding:'9px 18px',fontSize:13}}>Update Status</button>
+        <header style={{height:56,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',background:T.header,borderBottom:`1.5px solid ${T.headerBorder}`,flexShrink:0,transition:'background .2s'}}>
+          <h1 style={{fontSize:17,fontWeight:800,margin:0,color:T.text,letterSpacing:'-.3px'}}>{NAV.find(n=>n.id===nav)?.label||nav}</h1>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:12,fontWeight:600,color:T.textMuted}}>{time}</span>
+            {/* Dark mode toggle */}
+            <button onClick={()=>setDark(d=>!d)} style={{width:40,height:22,borderRadius:100,border:'none',background:dark?'#f97316':'#ddd',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}} title={dark?'Light mode':'Dark mode'}>
+              <div style={{position:'absolute',top:3,left:dark?20:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s',boxShadow:'0 1px 4px rgba(0,0,0,.2)'}}/>
+            </button>
+            <button onClick={()=>setShowAtt(true)} style={{...btnStyle,padding:'7px 14px',fontSize:12}}>Update Status</button>
           </div>
         </header>
 
-        <div style={{flex:1,overflowY:'auto',padding:'28px 32px'}}>
+        <div style={{flex:1,overflowY:'auto',padding:'22px 24px'}}>
 
           {/* OVERVIEW */}
           {nav==='overview'&&(
-            <div style={{display:'flex',flexDirection:'column',gap:24}}>
-              <div style={{background:'linear-gradient(135deg,#111 0%,#2d2d2d 100%)',color:'#fff',padding:'32px 36px',borderRadius:20,position:'relative',overflow:'hidden'}}>
-                <div style={{position:'absolute',top:-50,right:-50,width:200,height:200,background:'#a78bfa',borderRadius:'50%',filter:'blur(70px)',opacity:.25}}/>
+            <div style={{display:'flex',flexDirection:'column',gap:18}}>
+              {/* Hero */}
+              <div style={{background:dark?'linear-gradient(135deg,#1a1a1a,#2d2d2d)':'linear-gradient(135deg,#111,#2a2a2a)',color:'#fff',padding:'26px 28px',borderRadius:18,position:'relative',overflow:'hidden'}}>
+                <div style={{position:'absolute',top:-40,right:-40,width:180,height:180,background:'#f97316',borderRadius:'50%',filter:'blur(60px)',opacity:.15}}/>
                 <div style={{position:'relative',zIndex:1}}>
-                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
-                    <span style={{fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',background:'#a78bfa',color:'#fff',padding:'4px 12px',borderRadius:100}}>Welcome Back</span>
-                    {user?.company_name&&<span style={{fontSize:12,fontWeight:600,color:'rgba(255,255,255,.6)',background:'rgba(255,255,255,.1)',padding:'4px 12px',borderRadius:100}}>{user.company_name}</span>}
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+                    <span style={{fontSize:11,fontWeight:800,letterSpacing:'.07em',textTransform:'uppercase',background:'#f97316',color:'#fff',padding:'3px 10px',borderRadius:100}}>Admin</span>
+                    {user?.company_name&&<span style={{fontSize:11,color:'rgba(255,255,255,.5)',background:'rgba(255,255,255,.08)',padding:'3px 10px',borderRadius:100}}>{user.company_name}</span>}
                   </div>
-                  <h2 style={{fontSize:32,fontWeight:900,margin:'0 0 8px',letterSpacing:'-1px'}}>{greet()}, {name}</h2>
-                  <p style={{fontSize:15,opacity:.6,margin:'0 0 20px'}}>{tasks.filter(t=>t.status!=='done').length} active tasks &middot; {STATUS_LBL[myAtt.status]}</p>
-                  <button onClick={()=>setShowAtt(true)} style={{...S.btn,background:'#fff',color:'#111',fontSize:14,padding:'10px 20px'}}>Update Status</button>
+                  <h2 style={{fontSize:24,fontWeight:900,margin:'0 0 6px',letterSpacing:'-.8px'}}>{greet()}, {name}</h2>
+                  <p style={{fontSize:13,opacity:.5,margin:'0 0 16px'}}>{tasks.filter(t=>t.status!=='done').length} active tasks &middot; {onlineTeam.length} online now</p>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={()=>setShowAtt(true)} style={{...btnStyle,background:'rgba(255,255,255,.15)',color:'#fff',fontSize:12}}>Update Status</button>
+                  </div>
                 </div>
               </div>
 
-              <div style={{...S.card}}>
-                <div style={{padding:'12px 16px',borderBottom:'1px solid #f5f5f5',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                  <div>
-                    <span style={{fontSize:14,fontWeight:800,color:'#111'}}>Online Now</span>
-                    <span style={{marginLeft:8,fontSize:12,color:'#aaa'}}>{team.filter(m=>m.status==='office'||m.status==='remote').length} of {team.length}</span>
+              {/* Online Now */}
+              <div style={cardStyle}>
+                <div style={{padding:'12px 16px',borderBottom:`1px solid ${T.cardBorder}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:'#22c55e',boxShadow:'0 0 6px #22c55e'}}/>
+                    <span style={{fontSize:14,fontWeight:800,color:T.text}}>Online Now</span>
+                    <span style={{fontSize:12,color:T.textMuted,background:dark?'#2a2a2a':'#f5f5f5',padding:'1px 8px',borderRadius:100}}>{onlineTeam.length}/{team.length}</span>
                   </div>
-                  <button onClick={()=>fetchTeam(true)} style={{...S.btnGhost,padding:'5px 12px',fontSize:12}}>
-                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" style={{animation:refreshing?'spin .6s linear infinite':'none'}}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                    Refresh
-                  </button>
                 </div>
                 {ldTeam?
-                  <div style={{padding:'14px 16px',display:'flex',gap:8}}>{[1,2,3].map(i=><div key={i} style={{width:32,height:32,borderRadius:'50%',background:'#f0f0f0'}}/>)}</div>:
-                  team.filter(m=>m.status==='office'||m.status==='remote').length===0?
-                  <div style={{padding:'20px',textAlign:'center',color:'#aaa',fontSize:13}}>No one online right now</div>:
-                  <div style={{padding:'10px 16px',display:'flex',flexDirection:'column',gap:0}}>
-                    {team.filter(m=>m.status==='office'||m.status==='remote').map(m=>(
-                      <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #f8f8f8'}}>
+                  <div style={{padding:'14px 16px',display:'flex',gap:8}}>{[1,2,3].map(i=><div key={i} style={{width:34,height:34,borderRadius:'50%',background:T.skeletonBg}}/>)}</div>:
+                  onlineTeam.length===0?
+                  <div style={{padding:'20px',textAlign:'center',color:T.textMuted,fontSize:13}}>No one online right now</div>:
+                  <div style={{padding:'8px 16px',display:'flex',flexDirection:'column'}}>
+                    {onlineTeam.map((m,i)=>(
+                      <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:i<onlineTeam.length-1?`1px solid ${T.cardBorder}`:'none'}}>
                         <div style={{position:'relative',flexShrink:0}}>
-                          <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={32}/>
-                          <div style={{position:'absolute',bottom:0,right:0,width:8,height:8,borderRadius:'50%',background:STATUS_COLOR[m.status||'away'],border:'2px solid #fff'}}/>
+                          <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={32} dark={dark}/>
+                          <div style={{position:'absolute',bottom:0,right:0,width:8,height:8,borderRadius:'50%',background:SC[m.status||'away'],border:`2px solid ${T.card}`}}/>
                         </div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:13,fontWeight:700,color:'#111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||m.full_name||m.username}</div>
-                          <div style={{fontSize:11,color:'#aaa'}}>{m.job_role||m.role||'Member'}</div>
+                          <div style={{fontSize:13,fontWeight:700,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||m.full_name||m.username}</div>
+                          <div style={{fontSize:11,color:T.textMuted}}>{m.job_role||m.role||'Member'}{m.note?` · ${m.note}`:''}</div>
                         </div>
-                        <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:STATUS_BG[m.status||'away'],color:STATUS_COLOR[m.status||'away']}}>{STATUS_LBL[m.status||'away']}</span>
+                        <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:T.statusBadgeBg(m.status||'away'),color:T.statusBadgeTxt(m.status||'away')}}>{SL[m.status||'away']}</span>
                       </div>
                     ))}
                   </div>
                 }
               </div>
-
-              {tasks.filter(t=>t.status!=='done').length>0&&(
-                <div>
-                  <div style={{fontSize:17,fontWeight:800,color:'#111',marginBottom:14}}>My Open Tasks</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    {tasks.filter(t=>t.status!=='done').slice(0,4).map(t=>(
-                      <div key={t.id} style={{...S.card,padding:'10px 16px',display:'flex',alignItems:'center',gap:12}}>
-                        <div style={{width:10,height:10,borderRadius:'50%',flexShrink:0,background:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]||'#9ca3af'}}/>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:15,fontWeight:700,color:'#111'}}>{t.title}</div>
-                          <div style={{fontSize:13,color:'#888',marginTop:2}}>by {t.assigned_by_name||'Admin'}{t.due_date?` · Due ${new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}</div>
-                        </div>
-                        <select value={t.status} onChange={e=>handleUpdateTaskStatus(t.id,e.target.value as 'todo'|'in_progress'|'done')} style={{fontSize:13,fontWeight:600,padding:'6px 10px',borderRadius:8,border:'1.5px solid #e0e0e0',background:'#fff',cursor:'pointer',fontFamily:'Outfit,sans-serif',color:'#111'}}>
-                          <option value="todo">To Do</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                      </div>
-                    ))}
-                    {tasks.filter(t=>t.status!=='done').length>4&&<button onClick={()=>setNav('tasks')} style={{...S.btnGhost,fontSize:13,padding:'9px 18px',alignSelf:'flex-start'}}>View all tasks</button>}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           {/* TEAM */}
           {nav==='team'&&(
             <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:22,fontWeight:800,color:'#111'}}>Team</div>
-                  <div style={{fontSize:14,color:'#888',marginTop:2}}>{team.length} members</div>
+                  <div style={{fontSize:18,fontWeight:800,color:T.text}}>Team</div>
+                  <div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{team.length} members &middot; {onlineTeam.length} online</div>
                 </div>
-                <button onClick={()=>fetchTeam(true)} style={{...S.btnGhost,fontSize:13,padding:'9px 16px'}}>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" style={{animation:refreshing?'spin .65s linear infinite':'none'}}><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  Refresh
-                </button>
               </div>
-              <div style={{...S.card}}>
-                {ldTeam?[1,2,3,4].map(i=><div key={i} style={{display:'flex',alignItems:'center',gap:14,padding:'16px 20px',borderBottom:'1.5px solid #f0f0f0'}}><div style={{width:44,height:44,borderRadius:'50%',background:'#f0f0f0',flexShrink:0}}/><div style={{flex:1}}><div style={{height:14,background:'#f0f0f0',borderRadius:6,width:'40%',marginBottom:8}}/><div style={{height:12,background:'#f0f0f0',borderRadius:6,width:'25%'}}/></div></div>):
-                team.length===0?<div style={{textAlign:'center',padding:48,color:'#888',fontSize:15}}>No team members yet</div>:
-                team.map(m=>(
-                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderBottom:'1px solid #f5f5f5'}}>
-                    <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={36}/>
+              <div style={cardStyle}>
+                {ldTeam?[1,2,3,4].map(i=><div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderBottom:`1px solid ${T.cardBorder}`}}><div style={{width:34,height:34,borderRadius:'50%',background:T.skeletonBg,flexShrink:0}}/><div style={{flex:1}}><div style={{height:11,background:T.skeletonBg,borderRadius:4,width:'40%',marginBottom:6}}/><div style={{height:9,background:T.skeletonBg,borderRadius:4,width:'25%'}}/></div></div>):
+                team.length===0?<div style={{textAlign:'center',padding:40,color:T.textMuted,fontSize:13}}>No team members yet</div>:
+                team.map((m,i)=>(
+                  <div key={m.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderBottom:i<team.length-1?`1px solid ${T.cardBorder}`:'none'}}>
+                    <div style={{position:'relative',flexShrink:0}}>
+                      <Av name={m.name||m.full_name||m.username} pic={m.profile_picture} size={34} dark={dark}/>
+                      <div style={{position:'absolute',bottom:0,right:0,width:8,height:8,borderRadius:'50%',background:SC[m.status||'away'],border:`2px solid ${T.card}`}}/>
+                    </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:700,color:'#111'}}>{m.name||m.full_name||m.username}</div>
-                      <div style={{fontSize:13,color:'#888',marginTop:2}}>{m.job_role||m.role||'Member'}{m.note?` · ${m.note}`:''}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.text}}>{m.name||m.full_name||m.username}</div>
+                      <div style={{fontSize:11,color:T.textMuted}}>{m.job_role||m.role||'Member'}</div>
                     </div>
-                    <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
-                      <div style={{fontSize:12,fontWeight:700,padding:'4px 12px',borderRadius:100,background:STATUS_BG[m.status||'away'],color:STATUS_COLOR[m.status||'away']}}>
-                        {STATUS_LBL[m.status||'away']}
-                      </div>
-                      {m.since&&<div style={{fontSize:12,color:'#bbb'}}>{m.since}</div>}
-                    </div>
+                    <span style={{fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:100,background:T.statusBadgeBg(m.status||'away'),color:T.statusBadgeTxt(m.status||'away')}}>{SL[m.status||'away']}</span>
                   </div>
                 ))}
               </div>
@@ -311,41 +302,42 @@ export default function UserDashboard() {
           {/* TASKS */}
           {nav==='tasks'&&(
             <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
                 <div>
-                  <div style={{fontSize:18,fontWeight:800,color:'#111'}}>My Tasks</div>
-                  <div style={{fontSize:13,color:'#aaa',marginTop:2}}>{tasks.filter(t=>t.status!=='done').length} open &middot; {tasks.filter(t=>t.status==='done').length} done</div>
+                  <div style={{fontSize:18,fontWeight:800,color:T.text}}>Tasks</div>
+                  <div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{tasks.filter(t=>t.status!=='done').length} open &middot; {tasks.filter(t=>t.status==='done').length} done</div>
                 </div>
               </div>
               {tasks.length===0?
-                <div style={{textAlign:'center',padding:'48px 24px',background:'#fff',border:'1.5px dashed #e5e5e5',borderRadius:14}}>
-                  <div style={{fontSize:40,marginBottom:12}}>📋</div>
-                  <div style={{fontSize:16,fontWeight:800,color:'#111',marginBottom:4}}>No tasks yet</div>
-                  <div style={{fontSize:13,color:'#aaa'}}>Your admin will assign tasks to you</div>
+                <div style={{textAlign:'center',padding:'44px 24px',background:T.card,border:`1.5px dashed ${T.cardBorder}`,borderRadius:14}}>
+                  <div style={{fontSize:36,marginBottom:10}}>📋</div>
+                  <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>No tasks yet</div>
+                  <div style={{fontSize:13,color:T.textMuted}}>Assign your first task to a team member</div>
                 </div>:
-              <div style={{display:'flex',flexDirection:'column',gap:0,...S.card}}>
+              <div style={{...cardStyle,display:'flex',flexDirection:'column'}}>
                 {tasks.map((t,i)=>{
-                  const tAgo=(d?:string)=>{if(!d)return'';try{const s=Math.floor((Date.now()-new Date(d).getTime())/1000);if(s<60)return`${s}s ago`;if(s<3600)return`${Math.floor(s/60)}m ago`;if(s<86400)return`${Math.floor(s/3600)}h ago`;return`${Math.floor(s/86400)}d ago`;}catch{return'';}};
                   const SBTN=(st:'todo'|'in_progress'|'done',label:string,col:string)=>(
-                    <button onClick={()=>handleUpdateTaskStatus(t.id,st)} style={{padding:'3px 10px',borderRadius:100,border:'none',background:t.status===st?col+'18':'transparent',color:t.status===st?col:'#bbb',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .12s'}}>{label}</button>
+                    <button onClick={()=>handleUpdateTaskStatus(t.id,st)} style={{padding:'3px 9px',borderRadius:100,border:'none',background:t.status===st?col+'22':'transparent',color:t.status===st?col:T.textMuted,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',transition:'all .12s'}}>{label}</button>
                   );
                   return (
-                    <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',borderBottom:i<tasks.length-1?'1px solid #f5f5f5':'none'}}>
-                      <Av name={t.assigned_by_name} pic={t.assigned_by_picture} size={36}/>
+                    <div key={t.id} style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:i<tasks.length-1?`1px solid ${T.cardBorder}`:'none'}}>
+                      <Av name={t.assigned_to_name||t.assigned_to_username} pic={t.assigned_to_picture} size={34} dark={dark}/>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                          <span style={{fontSize:13,fontWeight:700,color:'#111'}}>{t.assigned_by_name||'Admin'}</span>
-                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{todo:'#f5f5f5',in_progress:'#fff7ed',done:'#f0fdf4'}[t.status],color:{todo:'#888',in_progress:'#f97316',done:'#16a34a'}[t.status]}}>{t.status==='in_progress'?'In Progress':t.status==='todo'?'To Do':'Done'}</span>
-                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{high:'#fef2f2',medium:'#fff7ed',low:'#f0fdf4'}[t.priority],color:{high:'#ef4444',medium:'#f97316',low:'#16a34a'}[t.priority]}}>{t.priority}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2,flexWrap:'wrap'}}>
+                          <span style={{fontSize:13,fontWeight:700,color:T.text,textDecoration:t.status==='done'?'line-through':'none'}}>{t.assigned_to_name||t.assigned_to_username||'Team member'}</span>
+                          <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:100,background:{high:dark?'rgba(239,68,68,.2)':'#fef2f2',medium:dark?'rgba(249,115,22,.2)':'#fff7ed',low:dark?'rgba(34,197,94,.2)':'#f0fdf4'}[t.priority],color:{high:'#ef4444',medium:'#f97316',low:'#22c55e'}[t.priority]}}>{t.priority}</span>
                         </div>
-                        <div style={{fontSize:12,color:'#555',fontWeight:600,marginBottom:1,textDecoration:t.status==='done'?'line-through':'none'}}>{t.title}</div>
-                        {t.due_date&&<div style={{fontSize:11,color:'#bbb'}}>Due {new Date(t.due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
+                        <div style={{fontSize:12,color:T.textSub,fontWeight:600,marginBottom:1}}>{t.title}</div>
+                        <div style={{fontSize:11,color:T.textMuted}}>{t.assigned_to_email||''}</div>
                       </div>
-                      <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
-                        <span style={{fontSize:11,color:'#bbb',marginRight:6}}>{tAgo(t.created_at)}</span>
+                      <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0}}>
+                        <span style={{fontSize:11,color:T.textMuted,marginRight:4}}>{tAgo(t.created_at)}</span>
                         {SBTN('todo','To Do','#888')}
                         {SBTN('in_progress','In Progress','#f97316')}
-                        {SBTN('done','Done','#16a34a')}
+                        {SBTN('done','Done','#22c55e')}
+                        <button onClick={()=>handleDeleteTask(t.id)} disabled={deletingTask===t.id} style={{width:26,height:26,borderRadius:6,border:'none',background:dark?'rgba(239,68,68,.15)':'#fef2f2',color:'#ef4444',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',marginLeft:4,flexShrink:0}}>
+                          {deletingTask===t.id?'…':<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>}
+                        </button>
                       </div>
                     </div>
                   );
@@ -354,41 +346,37 @@ export default function UserDashboard() {
             </div>
           )}
 
-          {/* JOBS */}
           {nav==='jobs'&&(
             <div>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
-                <div>
-                  <div style={{fontSize:22,fontWeight:800,color:'#111'}}>Find a Job</div>
-                  <div style={{fontSize:14,color:'#888',marginTop:2}}>{filteredJobs.length} openings</div>
-                </div>
-                <input style={{...S.inp,width:240,padding:'10px 14px',fontSize:14}} placeholder="Search jobs..." value={jobSearch} onChange={e=>setJobSearch(e.target.value)}/>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
+                <div><div style={{fontSize:18,fontWeight:800,color:T.text}}>Find a Job</div><div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{filteredJobs.length} openings</div></div>
+                <input style={{border:'1px solid '+T.inputBorder,borderRadius:8,padding:'7px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:200}} placeholder="Search jobs..." value={jobSearch} onChange={e=>setJobSearch(e.target.value)}/>
               </div>
               {filteredJobs.length===0?
-                <div style={{textAlign:'center',padding:'56px 24px',background:'#fff',border:'2px dashed #e5e5e5',borderRadius:18}}>
-                  <div style={{fontSize:48,marginBottom:14}}>🔍</div>
-                  <div style={{fontSize:18,fontWeight:800,color:'#111',marginBottom:6}}>No jobs found</div>
-                  <div style={{fontSize:14,color:'#888'}}>Try a different search</div>
+                <div style={{textAlign:'center',padding:'44px 24px',background:T.card,border:'1.5px dashed '+T.cardBorder,borderRadius:14}}>
+                  <div style={{fontSize:36,marginBottom:10}}>🔍</div>
+                  <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>No jobs found</div>
+                  <div style={{fontSize:13,color:T.textMuted}}>Try a different search</div>
                 </div>:
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:14}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
                 {filteredJobs.map(j=>{
                   const app=getAppStatus(j.id);
                   return (
-                    <div key={j.id} style={{...S.card,padding:'20px 22px',display:'flex',flexDirection:'column',gap:12}}>
-                      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}}>
+                    <div key={j.id} style={{background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,padding:'16px 18px',display:'flex',flexDirection:'column',gap:10}}>
+                      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:16,fontWeight:800,color:'#111',marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{j.title}</div>
-                          <div style={{fontSize:13,color:'#888'}}>{j.company_name}</div>
+                          <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{j.title}</div>
+                          <div style={{fontSize:12,color:T.textMuted}}>{j.company_name}</div>
                         </div>
-                        {app&&<span style={{fontSize:11,fontWeight:800,padding:'3px 10px',borderRadius:100,background:{applied:'#eff6ff',accepted:'#f0fdf4',rejected:'#fef2f2'}[app.status]||'#f5f5f5',color:{applied:'#2563eb',accepted:'#16a34a',rejected:'#ef4444'}[app.status]||'#888',flexShrink:0,textTransform:'uppercase',letterSpacing:'.05em'}}>{app.status}</span>}
+                        {app&&<span style={{fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:100,background:app.status==='accepted'?(dark?'rgba(34,197,94,.2)':'#f0fdf4'):app.status==='rejected'?(dark?'rgba(239,68,68,.2)':'#fef2f2'):(dark?'rgba(96,165,250,.2)':'#eff6ff'),color:app.status==='accepted'?'#22c55e':app.status==='rejected'?'#ef4444':'#3b82f6',flexShrink:0,textTransform:'uppercase'}}>{app.status}</span>}
                       </div>
-                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        <span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:8,background:'#f5f5f5',color:'#555'}}>{j.location}</span>
-                        <span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:8,background:'#f5f5f5',color:'#555'}}>{j.type}</span>
-                        {j.salary&&<span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:8,background:'#f0fdf4',color:'#16a34a'}}>{j.salary}</span>}
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        <span style={{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6,background:dark?'#2a2a2a':'#f5f5f5',color:T.textSub}}>{j.location}</span>
+                        <span style={{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6,background:dark?'#2a2a2a':'#f5f5f5',color:T.textSub}}>{j.type}</span>
+                        {j.salary&&<span style={{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:6,background:dark?'rgba(34,197,94,.15)':'#f0fdf4',color:'#22c55e'}}>{j.salary}</span>}
                       </div>
-                      {j.tags&&j.tags.length>0&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{j.tags.slice(0,4).map((tag,i)=><span key={i} style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:6,background:'#f5f3ff',color:'#7c3aed'}}>{tag}</span>)}</div>}
-                      <button disabled={!!app||applying===j.id} onClick={()=>!app&&handleApplyJob(j.id,j.title)} style={{...S.btn,width:'100%',justifyContent:'center',fontSize:14,padding:'10px',opacity:(!!app||applying===j.id)?0.5:1,cursor:app?'default':'pointer',background:app?'#f5f5f5':'#111',color:app?'#888':'#fff'}}>
+                      {j.tags&&j.tags.length>0&&<div style={{display:'flex',gap:5,flexWrap:'wrap'}}>{j.tags.slice(0,4).map((tag,i)=><span key={i} style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:6,background:dark?'rgba(167,139,250,.15)':'#f5f3ff',color:'#a78bfa'}}>{tag}</span>)}</div>}
+                      <button disabled={!!app||applying===j.id} onClick={()=>!app&&handleApplyJob(j.id,j.title)} style={{padding:'8px',borderRadius:8,border:'none',background:app?(dark?'#2a2a2a':'#f5f5f5'):T.btnPrimary,color:app?T.textMuted:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:app?'default':'pointer',fontFamily:'Outfit,sans-serif',opacity:(!!app||applying===j.id)?0.6:1}}>
                         {applying===j.id?'Applying...':app?'Applied':'Apply Now'}
                       </button>
                     </div>
@@ -396,16 +384,16 @@ export default function UserDashboard() {
                 })}
               </div>}
               {myApps.length>0&&(
-                <div style={{marginTop:32}}>
-                  <div style={{fontSize:17,fontWeight:800,color:'#111',marginBottom:14}}>My Applications</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    {myApps.map(a=>(
-                      <div key={a.id} style={{...S.card,padding:'14px 20px',display:'flex',alignItems:'center',gap:14}}>
+                <div style={{marginTop:20}}>
+                  <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:10}}>My Applications</div>
+                  <div style={{background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,overflow:'hidden'}}>
+                    {myApps.map((a,i)=>(
+                      <div key={a.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i<myApps.length-1?'1px solid '+T.cardBorder:'none'}}>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:15,fontWeight:700,color:'#111',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.job_title||'Job'}</div>
-                          <div style={{fontSize:13,color:'#888',marginTop:2}}>{a.company_name||''} &middot; {new Date(a.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+                          <div style={{fontSize:13,fontWeight:700,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.job_title||'Job'}</div>
+                          <div style={{fontSize:11,color:T.textMuted}}>{a.company_name||''}</div>
                         </div>
-                        <span style={{fontSize:12,fontWeight:700,padding:'4px 12px',borderRadius:100,background:{applied:'#eff6ff',accepted:'#f0fdf4',rejected:'#fef2f2'}[a.status]||'#f5f5f5',color:{applied:'#2563eb',accepted:'#16a34a',rejected:'#ef4444'}[a.status]||'#888',textTransform:'capitalize'}}>{a.status}</span>
+                        <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:a.status==='accepted'?(dark?'rgba(34,197,94,.2)':'#f0fdf4'):a.status==='rejected'?(dark?'rgba(239,68,68,.2)':'#fef2f2'):(dark?'rgba(96,165,250,.2)':'#eff6ff'),color:a.status==='accepted'?'#22c55e':a.status==='rejected'?'#ef4444':'#3b82f6',textTransform:'capitalize'}}>{a.status}</span>
                       </div>
                     ))}
                   </div>
@@ -413,90 +401,85 @@ export default function UserDashboard() {
               )}
             </div>
           )}
-
-          {/* SETTINGS */}
-          {nav==='settings'&&<SettingsSection user={user} setUser={setUser} showToast={showToast}/>}
+          {nav==='settings'&&<SettingsSection user={user} setUser={setUser} showToast={showToast} dark={dark} T={T}/>}
         </div>
       </main>
     </div>
   );
 }
+type ThemeType = ReturnType<typeof mkS>;
 
-// Attendance Modal
-function AttModal({current,onSave,onClose}:{current:AttendanceRecord;onSave:(s:'office'|'remote'|'away',note:string)=>void;onClose:()=>void}) {
+function AttModal({current,onSave,onClose,dark}:{current:AttendanceRecord;onSave:(s:'office'|'remote'|'away',note:string)=>void;onClose:()=>void;dark:boolean}) {
   const [status,setStatus] = useState<'office'|'remote'|'away'>(current.status);
   const [note,setNote] = useState(current.note);
-  const opts = [{id:'office' as const,label:'In Office',icon:'🏢',color:'#f97316'},{id:'remote' as const,label:'Remote',icon:'🏠',color:'#7c3aed'},{id:'away' as const,label:'Away',icon:'💤',color:'#9ca3af'}];
+  const T = mkS(dark);
+  const opts = [{id:'office' as const,label:'In Office',icon:'🏢',color:'#f97316'},{id:'remote' as const,label:'Remote',icon:'🏠',color:'#a78bfa'},{id:'away' as const,label:'Away',icon:'💤',color:'#888'}];
   return (
-    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:400,boxShadow:'0 20px 60px rgba(0,0,0,.15)'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
-          <span style={{fontSize:18,fontWeight:800,color:'#111'}}>Update Status</span>
-          <button onClick={onClose} style={{width:32,height:32,borderRadius:'50%',border:'1.5px solid #e0e0e0',background:'#f8f8f8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{background:T.card,borderRadius:18,padding:22,width:'100%',maxWidth:340,boxShadow:'0 20px 60px rgba(0,0,0,.25)',border:'1px solid '+T.cardBorder}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+          <span style={{fontSize:15,fontWeight:800,color:T.text}}>Update Status</span>
+          <button onClick={onClose} style={{width:26,height:26,borderRadius:'50%',border:'1px solid '+T.cardBorder,background:T.btnGhost,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',color:T.text}}>x</button>
         </div>
-        <div style={{display:'flex',gap:10,marginBottom:18}}>
-          {opts.map(o=><button key={o.id} onClick={()=>setStatus(o.id)} style={{flex:1,padding:'14px 6px',borderRadius:12,border:`2px solid ${status===o.id?o.color:'#e5e5e5'}`,background:status===o.id?`${o.color}12`:'transparent',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:6,transition:'all .15s'}}><span style={{fontSize:24}}>{o.icon}</span><span style={{fontSize:13,fontWeight:700,color:status===o.id?o.color:'#888'}}>{o.label}</span></button>)}
+        <div style={{display:'flex',gap:8,marginBottom:14}}>
+          {opts.map(o=><button key={o.id} onClick={()=>setStatus(o.id)} style={{flex:1,padding:'11px 4px',borderRadius:10,border:'1.5px solid '+(status===o.id?o.color:T.cardBorder),background:status===o.id?o.color+'18':T.btnGhost,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4}}><span style={{fontSize:20}}>{o.icon}</span><span style={{fontSize:11,fontWeight:700,color:status===o.id?o.color:T.textMuted}}>{o.label}</span></button>)}
         </div>
-        <input style={{width:'100%',border:'1.5px solid #e0e0e0',borderRadius:10,padding:'11px 14px',fontSize:14,fontFamily:'Outfit,sans-serif',outline:'none',boxSizing:'border-box',marginBottom:18,color:'#111'}} placeholder="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
-        <div style={{display:'flex',gap:10}}>
-          <button onClick={onClose} style={{flex:1,padding:'11px',borderRadius:10,border:'1.5px solid #e0e0e0',background:'#fff',cursor:'pointer',fontFamily:'Outfit,sans-serif',fontWeight:700,fontSize:14,color:'#444'}}>Cancel</button>
-          <button onClick={()=>{onSave(status,note);onClose();}} style={{flex:2,padding:'11px',borderRadius:10,border:'none',background:'#111',color:'#fff',cursor:'pointer',fontFamily:'Outfit,sans-serif',fontWeight:700,fontSize:14}}>Save</button>
+        <input style={{width:'100%',border:'1px solid '+T.inputBorder,borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',boxSizing:'border-box',marginBottom:12,color:T.text,background:T.input}} placeholder="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={onClose} style={{flex:1,padding:'8px',borderRadius:8,border:'1px solid '+T.cardBorder,background:T.btnGhost,cursor:'pointer',fontFamily:'Outfit,sans-serif',fontWeight:700,fontSize:13,color:T.text}}>Cancel</button>
+          <button onClick={()=>{onSave(status,note);onClose();}} style={{flex:2,padding:'8px',borderRadius:8,border:'none',background:T.btnPrimary,color:T.btnPrimaryTxt,cursor:'pointer',fontFamily:'Outfit,sans-serif',fontWeight:700,fontSize:13}}>Save</button>
         </div>
       </div>
     </div>
   );
 }
 
-// Settings Section
-function SettingsSection({user,setUser,showToast}:{user:User|null;setUser:(u:User)=>void;showToast:(m:string,t?:'success'|'error')=>void}) {
+function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser:(u:User)=>void;showToast:(m:string,t?:'success'|'error')=>void;dark:boolean;T:ThemeType}) {
   const [form,setForm] = useState({fullName:user?.full_name||'',username:user?.username||''});
   const [pw,setPw] = useState({cur:'',new_:'',conf:''});
   const [saving,setSaving] = useState(false);
   const [savingPw,setSavingPw] = useState(false);
   const [uploading,setUploading] = useState(false);
-  const save = async()=>{setSaving(true);try{const r=await axios.put(`${API}/api/auth/profile`,{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
-  const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(`${API}/api/auth/change-password`,{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
-  const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(`${API}/api/avatar/upload`,fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
-  const inp = {border:'1px solid #e5e5e5',borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:'#fff',color:'#111',width:'100%',boxSizing:'border-box' as const};
-  const lbl = {fontSize:12,fontWeight:700 as const,color:'#666',display:'block' as const,marginBottom:5};
-  const card = {background:'#fff',border:'1px solid #efefef',borderRadius:14,padding:'20px',marginBottom:12};
+  const save = async()=>{setSaving(true);try{const r=await axios.put(API+'/api/auth/profile',{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
+  const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(API+'/api/auth/change-password',{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
+  const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(API+'/api/avatar/upload',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
+  const inp = {border:'1px solid '+T.inputBorder,borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:'100%',boxSizing:'border-box' as const};
+  const lbl = {fontSize:12,fontWeight:700 as const,color:T.textSub,display:'block' as const,marginBottom:5};
+  const sec = {background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,padding:'18px',marginBottom:10};
   return (
-    <div style={{maxWidth:460,margin:'0 auto'}}>
-      <div style={{fontSize:18,fontWeight:800,color:'#111',marginBottom:16}}>Settings</div>
-      <div style={card}>
-        <div style={{fontSize:12,fontWeight:800,color:'#aaa',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:16}}>Profile Picture</div>
-        <div style={{display:'flex',alignItems:'center',gap:18}}>
-          <div style={{width:56,height:56,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(user?.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+    <div style={{maxWidth:440,margin:'0 auto'}}>
+      <div style={{fontSize:18,fontWeight:800,color:T.text,marginBottom:14}}>Settings</div>
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Profile Picture</div>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(user?.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
             {user?.profile_picture&&(user.profile_picture.startsWith('data:')||user.profile_picture.startsWith('http'))&&<img src={user.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
-            <span style={{fontSize:18,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
+            <span style={{fontSize:17,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
           </div>
-          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
             {uploading?'Uploading...':'Upload Photo'}
             <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
           </label>
         </div>
       </div>
-      <div style={card}>
-        <div style={{fontSize:12,fontWeight:800,color:'#aaa',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:16}}>Profile Info</div>
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Profile Info</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
           <div><label style={lbl}>Full Name</label><input style={inp} value={form.fullName} onChange={e=>setForm(p=>({...p,fullName:e.target.value}))} placeholder="Your name"/></div>
           <div><label style={lbl}>Username</label><input style={inp} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="username"/></div>
           <div><label style={lbl}>Email</label><input style={{...inp,opacity:.5,cursor:'not-allowed'}} value={user?.email||''} disabled/></div>
-          <button onClick={save} disabled={saving} style={{alignSelf:'flex-start',padding:'8px 18px',borderRadius:8,border:'none',background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>{saving?'Saving...':'Save Changes'}</button>
+          <button onClick={save} disabled={saving} style={{alignSelf:'flex-start',padding:'7px 16px',borderRadius:8,border:'none',background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>{saving?'Saving...':'Save Changes'}</button>
         </div>
       </div>
-      <div style={card}>
-        <div style={{fontSize:12,fontWeight:800,color:'#aaa',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:16}}>Change Password</div>
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Change Password</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
           <div><label style={lbl}>Current Password</label><input type="password" style={inp} value={pw.cur} onChange={e=>setPw(p=>({...p,cur:e.target.value}))} placeholder="••••••••"/></div>
           <div><label style={lbl}>New Password</label><input type="password" style={inp} value={pw.new_} onChange={e=>setPw(p=>({...p,new_:e.target.value}))} placeholder="Min 8 chars"/></div>
           <div><label style={lbl}>Confirm Password</label><input type="password" style={inp} value={pw.conf} onChange={e=>setPw(p=>({...p,conf:e.target.value}))} placeholder="Repeat"/></div>
-          <button onClick={changePw} disabled={savingPw||!pw.cur||!pw.new_} style={{alignSelf:'flex-start',padding:'8px 18px',borderRadius:8,border:'none',background:'#111',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',opacity:(!pw.cur||!pw.new_)?0.4:1}}>{savingPw?'Changing...':'Change Password'}</button>
+          <button onClick={changePw} disabled={savingPw||!pw.cur||!pw.new_} style={{alignSelf:'flex-start',padding:'7px 16px',borderRadius:8,border:'none',background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif',opacity:(!pw.cur||!pw.new_)?0.4:1}}>{savingPw?'Changing...':'Change Password'}</button>
         </div>
       </div>
     </div>
   );
 }
-
-
-
