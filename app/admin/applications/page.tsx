@@ -17,6 +17,12 @@ interface JobApplicant {
   email?: string;
   username?: string;
   profile_picture?: string;
+  bio?: string;
+  skills?: string;
+  experience?: string;
+  location?: string;
+  phone_number?: string;
+  cv_url?: string;
   status: 'applied' | 'reviewing' | 'accepted' | 'rejected';
   created_at?: string;
 }
@@ -79,6 +85,7 @@ export default function AdminApplicationsPage() {
   const [acting, setActing] = useState<number | string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [filter, setFilter] = useState<'all' | 'applied' | 'reviewing' | 'accepted' | 'rejected'>('all');
+  const [selectedApplicant, setSelectedApplicant] = useState<JobApplicant|null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -158,6 +165,14 @@ export default function AdminApplicationsPage() {
         <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, padding: '12px 18px', borderRadius: 14, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, background: toast.type === 'success' ? '#0f0e0c' : '#ef4444', color: '#fff', boxShadow: '0 8px 28px rgba(0,0,0,.14)' }}>
           {toast.type === 'success' ? '✓' : '✕'} {toast.msg}
         </div>
+      )}
+
+      {selectedApplicant && (
+        <ApplicantDetailPanel
+          app={selectedApplicant}
+          onClose={() => setSelectedApplicant(null)}
+          onStatusChange={(status) => { handleUpdateStatus(selectedApplicant.id, status); setSelectedApplicant(null); }}
+        />
       )}
 
       {/* Header */}
@@ -285,13 +300,19 @@ export default function AdminApplicationsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {filtered.map((app, i) => (
                     <div key={app.id} className="card a-rise" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 0.04}s` }}>
-                      {/* Avatar */}
-                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: getColor(app.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15, fontWeight: 900, color: '#fff' }}>
-                        {getInitials(app.full_name || app.username)}
+                      {/* Avatar — clickable */}
+                      <div
+                        onClick={() => setSelectedApplicant(app)}
+                        style={{ width: 44, height: 44, borderRadius: '50%', background: getColor(app.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15, fontWeight: 900, color: '#fff', cursor: 'pointer', overflow: 'hidden', position: 'relative' }}
+                      >
+                        {app.profile_picture && (app.profile_picture.startsWith('data:') || app.profile_picture.startsWith('http'))
+                          ? <img src={app.profile_picture} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          : getInitials(app.full_name || app.username)
+                        }
                       </div>
 
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Info — clickable */}
+                      <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => setSelectedApplicant(app)}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                           <span style={{ fontSize: 14, fontWeight: 800 }}>{app.full_name || app.username || 'Unknown'}</span>
                           <span className={`badge badge-${app.status}`}>{app.status}</span>
@@ -333,5 +354,50 @@ export default function AdminApplicationsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function ApplicantDetailPanel({ app, onClose, onStatusChange }: { app: JobApplicant; onClose: () => void; onStatusChange: (s: string) => void; }) {
+  const skills = app.skills ? app.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const COLORS2 = ['#f97316', '#a89fff', '#fbbf24', '#34d399', '#fb7185', '#60a5fa'];
+  const gc = (id: number | string) => COLORS2[Number(id) % COLORS2.length];
+  const gi = (name?: string) => (name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  return (
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 9000, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
+      <div style={{ width: '100%', maxWidth: 420, background: '#fff', height: '100%', overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,.15)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(0,0,0,.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#0f0e0c' }}>Applicant Profile</span>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid rgba(0,0,0,.1)', background: '#f8f8f8', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>x</button>
+        </div>
+        <div style={{ padding: '20px', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', position: 'relative', background: gc(app.user_id), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {app.profile_picture && (app.profile_picture.startsWith('data:') || app.profile_picture.startsWith('http'))
+                ? <img src={app.profile_picture} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{gi(app.full_name || app.username)}</span>}
+            </div>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#0f0e0c' }}>{app.full_name || app.username}</div>
+              <div style={{ fontSize: 12, color: '#9e9b94', marginTop: 2 }}>{app.email}</div>
+              {app.location && <div style={{ fontSize: 12, color: '#9e9b94', marginTop: 1 }}>Location: {app.location}</div>}
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <span className={'badge badge-' + app.status} style={{ fontSize: 12, padding: '4px 12px' }}>{app.status}</span>
+          </div>
+          {app.phone_number && <div style={{ marginBottom: 14 }}><div style={{ fontSize: 11, fontWeight: 800, color: '#9e9b94', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>Contact</div><div style={{ fontSize: 13, color: '#0f0e0c' }}>Phone: {app.phone_number}</div></div>}
+          {app.bio && <div style={{ marginBottom: 14 }}><div style={{ fontSize: 11, fontWeight: 800, color: '#9e9b94', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>About</div><div style={{ fontSize: 13, color: '#0f0e0c', lineHeight: 1.6, background: '#faf9f7', padding: '10px 12px', borderRadius: 8 }}>{app.bio}</div></div>}
+          {skills.length > 0 && <div style={{ marginBottom: 14 }}><div style={{ fontSize: 11, fontWeight: 800, color: '#9e9b94', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Skills</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{skills.map((s, i) => <span key={i} style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 100, background: 'rgba(168,159,255,.12)', color: '#6b5ce7' }}>{s}</span>)}</div></div>}
+          {app.experience && <div style={{ marginBottom: 14 }}><div style={{ fontSize: 11, fontWeight: 800, color: '#9e9b94', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>Experience</div><div style={{ fontSize: 13, color: '#0f0e0c', lineHeight: 1.6, background: '#faf9f7', padding: '10px 12px', borderRadius: 8, whiteSpace: 'pre-wrap' }}>{app.experience}</div></div>}
+          {app.cv_url && <div style={{ marginBottom: 20 }}><div style={{ fontSize: 11, fontWeight: 800, color: '#9e9b94', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>CV / Portfolio</div><a href={app.cv_url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>View CV / Portfolio</a></div>}
+          {!app.bio && !app.skills && !app.experience && !app.cv_url && <div style={{ textAlign: 'center', padding: '24px', color: '#9e9b94', fontSize: 13, background: '#faf9f7', borderRadius: 10 }}>This applicant has not filled their profile yet.</div>}
+        </div>
+        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(0,0,0,.07)', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button onClick={() => onStatusChange('rejected')} disabled={app.status === 'rejected'} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(239,68,68,.1)', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: app.status === 'rejected' ? 'default' : 'pointer', fontFamily: 'Outfit,sans-serif', opacity: app.status === 'rejected' ? 0.4 : 1 }}>Reject</button>
+          <button onClick={() => onStatusChange('reviewing')} disabled={app.status === 'reviewing'} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'rgba(96,165,250,.1)', color: '#2563eb', fontSize: 13, fontWeight: 700, cursor: app.status === 'reviewing' ? 'default' : 'pointer', fontFamily: 'Outfit,sans-serif', opacity: app.status === 'reviewing' ? 0.4 : 1 }}>Reviewing</button>
+          <button onClick={() => onStatusChange('accepted')} disabled={app.status === 'accepted'} style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: '#22c55e', color: '#fff', fontSize: 13, fontWeight: 700, cursor: app.status === 'accepted' ? 'default' : 'pointer', fontFamily: 'Outfit,sans-serif', opacity: app.status === 'accepted' ? 0.4 : 1 }}>Accept</button>
+        </div>
+      </div>
+    </div>
   );
 }
