@@ -273,7 +273,7 @@ export default function FindCompanyPage() {
                       </button>
                     </div>
                   );
-                })}
+                }) }
               </div>
             )}
           </div>
