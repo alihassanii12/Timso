@@ -27,7 +27,7 @@ const setupAxios = () => {
   });
 };
 
-interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
+interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; bio?:string; skills?:string; experience?:string; location?:string; phone_number?:string; cv_url?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
 interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_to_email?:string; assigned_to_username?:string; assigned_by:number|string; assigned_by_name?:string; assigned_to_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
 interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; }
@@ -58,6 +58,7 @@ const NAV = [
   {id:'team',label:'Team',icon:'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z'},
   {id:'tasks',label:'Tasks',icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'},
   {id:'jobs',label:'Find Job',icon:'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'},
+  {id:'profile',label:'My Profile',icon:'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'},
   {id:'settings',label:'Settings',icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z'},
 ];
 
@@ -422,6 +423,7 @@ export default function UserDashboard() {
               )}
             </div>
           )}
+          {nav==='profile'&&<ProfileSection user={user} setUser={setUser} showToast={showToast} dark={dark} T={T}/>}
           {nav==='settings'&&<SettingsSection user={user} setUser={setUser} showToast={showToast} dark={dark} T={T}/>}
         </div>
       </main>
@@ -451,6 +453,98 @@ function AttModal({current,onSave,onClose,dark}:{current:AttendanceRecord;onSave
           <button onClick={()=>{onSave(status,note);onClose();}} style={{flex:2,padding:'8px',borderRadius:8,border:'none',background:T.btnPrimary,color:T.btnPrimaryTxt,cursor:'pointer',fontFamily:'Outfit,sans-serif',fontWeight:700,fontSize:13}}>Save</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ProfileSection({user,setUser,showToast,dark,T}:{user:User|null;setUser:(u:User)=>void;showToast:(m:string,t?:'success'|'error')=>void;dark:boolean;T:ReturnType<typeof mkS>}) {
+  const [form,setForm] = useState({
+    fullName:user?.full_name||'', username:user?.username||'',
+    phone:user?.phone_number||'', location:user?.location||'',
+    bio:user?.bio||'', skills:user?.skills||'',
+    experience:user?.experience||'', cvUrl:user?.cv_url||''
+  });
+  const [saving,setSaving] = useState(false);
+  const [uploading,setUploading] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await axios.put(`${API}/api/auth/profile`, {
+        fullName:form.fullName, username:form.username,
+        phoneNumber:form.phone, location:form.location,
+        bio:form.bio, skills:form.skills,
+        experience:form.experience, cvUrl:form.cvUrl
+      });
+      if (r.data?.success) {
+        setUser({...user, full_name:form.fullName, username:form.username,
+          phone_number:form.phone, location:form.location,
+          bio:form.bio, skills:form.skills, experience:form.experience, cv_url:form.cvUrl} as User);
+        showToast('Profile updated!');
+      }
+    } catch(e:unknown) { const ax=e as {response?:{data?:{message?:string}}}; showToast(ax?.response?.data?.message||'Failed','error'); }
+    finally { setSaving(false); }
+  };
+
+  const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>) => {
+    const f=e.target.files?.[0]; if(!f) return; setUploading(true);
+    try {
+      const fd=new FormData(); fd.append('avatar',f);
+      const r=await axios.post(`${API}/api/avatar/upload`,fd,{headers:{'Content-Type':'multipart/form-data'}});
+      if(r.data?.success) { setUser({...user,profile_picture:r.data.data.avatar_url} as User); showToast('Photo updated!'); }
+    } catch { showToast('Upload failed','error'); } finally { setUploading(false); }
+  };
+
+  const inp = {border:'1px solid '+T.inputBorder,borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:'100%',boxSizing:'border-box' as const};
+  const ta = {...inp,resize:'vertical' as const,minHeight:80};
+  const lbl = {fontSize:12,fontWeight:700 as const,color:T.textSub,display:'block' as const,marginBottom:5};
+  const sec = {background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,padding:'18px',marginBottom:10};
+
+  return (
+    <div style={{maxWidth:560,margin:'0 auto'}}>
+      <div style={{fontSize:18,fontWeight:800,color:T.text,marginBottom:14}}>My Profile</div>
+
+      {/* Avatar */}
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Profile Photo</div>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(user?.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            {user?.profile_picture&&(user.profile_picture.startsWith('data:')||user.profile_picture.startsWith('http'))&&<img src={user.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
+            <span style={{fontSize:22,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
+          </div>
+          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
+            {uploading?'Uploading...':'Upload Photo'}
+            <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
+          </label>
+        </div>
+      </div>
+
+      {/* Basic Info */}
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Basic Info</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <div><label style={lbl}>Full Name</label><input style={inp} value={form.fullName} onChange={e=>setForm(p=>({...p,fullName:e.target.value}))} placeholder="Your name"/></div>
+          <div><label style={lbl}>Username</label><input style={inp} value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="username"/></div>
+          <div><label style={lbl}>Phone</label><input style={inp} value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} placeholder="+92 300 0000000"/></div>
+          <div><label style={lbl}>Location</label><input style={inp} value={form.location} onChange={e=>setForm(p=>({...p,location:e.target.value}))} placeholder="City, Country"/></div>
+        </div>
+        <div style={{marginTop:10}}><label style={lbl}>Email</label><input style={{...inp,opacity:.5,cursor:'not-allowed'}} value={user?.email||''} disabled/></div>
+      </div>
+
+      {/* Professional */}
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Professional Details</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <div><label style={lbl}>Bio / About</label><textarea style={ta} value={form.bio} onChange={e=>setForm(p=>({...p,bio:e.target.value}))} placeholder="Tell employers about yourself..."/></div>
+          <div><label style={lbl}>Skills <span style={{fontWeight:400,color:T.textMuted}}>(comma separated)</span></label><input style={inp} value={form.skills} onChange={e=>setForm(p=>({...p,skills:e.target.value}))} placeholder="React, Node.js, TypeScript..."/></div>
+          <div><label style={lbl}>Experience</label><textarea style={ta} value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))} placeholder="Work history, projects, achievements..."/></div>
+          <div><label style={lbl}>CV / Portfolio URL</label><input style={inp} value={form.cvUrl} onChange={e=>setForm(p=>({...p,cvUrl:e.target.value}))} placeholder="https://drive.google.com/..."/></div>
+        </div>
+      </div>
+
+      <button onClick={save} disabled={saving} style={{padding:'9px 22px',borderRadius:9,border:'none',background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>
+        {saving?'Saving...':'Save Profile'}
+      </button>
     </div>
   );
 }

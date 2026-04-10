@@ -30,7 +30,7 @@ const setupAxios = () => {
 interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
 interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_to_email?:string; assigned_to_username?:string; assigned_by:number|string; assigned_by_name?:string; assigned_to_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
-interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; }
+interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; profile_picture?:string; bio?:string; skills?:string; experience?:string; location?:string; phone_number?:string; cv_url?:string; }
 interface AssignableUser { id:number|string; full_name?:string; username?:string; }
 interface AttendanceRecord { status:'office'|'remote'|'away'; note:string; since:string; }
 interface Member { id:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; is_active?:boolean; }
@@ -105,6 +105,7 @@ export default function AdminDashboard() {
   const [taskLoading, setTaskLoading] = useState(false);
   const [ldTeam, setLdTeam] = useState(true);
   const [deletingTask, setDeletingTask] = useState<number|string|null>(null);
+  const [selectedApplicant, setSelectedApplicant] = useState<Application|null>(null);
   const [resignRequests, setResignRequests] = useState<{id:number|string;user_id:number|string;full_name?:string;email?:string;username?:string;profile_picture?:string;created_at?:string}[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
@@ -167,6 +168,7 @@ export default function AdminDashboard() {
     <div style={{display:'flex',height:'100vh',overflow:'hidden',background:T.bg,fontFamily:'Outfit,sans-serif',transition:'background .2s'}}>
       {toast&&<div style={{position:'fixed',bottom:20,right:20,zIndex:9999,padding:'11px 18px',borderRadius:12,fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8,background:toast.type==='success'?T.btnPrimary:'#ef4444',color:toast.type==='success'?T.btnPrimaryTxt:'#fff',boxShadow:'0 6px 24px rgba(0,0,0,.2)'}}>{toast.type==='success'?'✓':'✕'} {toast.msg}</div>}
       {showAtt&&<AttModal current={myAtt} onSave={handleSaveAtt} onClose={()=>setShowAtt(false)} dark={dark}/>}
+      {selectedApplicant&&<ApplicantPanel app={selectedApplicant} onClose={()=>setSelectedApplicant(null)} onAccept={()=>{handleApplication(selectedApplicant.id,'accepted');setSelectedApplicant(null);}} onReject={()=>{handleApplication(selectedApplicant.id,'rejected');setSelectedApplicant(null);}} dark={dark} T={T}/>}
       {showTask&&<TModal users={assignUsers} onSubmit={handleAssignTask} onClose={()=>setShowTask(false)} loading={taskLoading} dark={dark}/>}
 
       {/* SIDEBAR */}
@@ -290,12 +292,15 @@ export default function AdminDashboard() {
                   <div style={{display:'flex',flexDirection:'column',gap:6}}>
                     {applications.slice(0,4).map(app=>(
                       <div key={app.id} style={{...cardStyle,padding:'11px 14px',display:'flex',alignItems:'center',gap:10}}>
-                        <Av name={app.full_name||app.username} size={34} dark={dark}/>
-                        <div style={{flex:1,minWidth:0}}>
+                        <div onClick={()=>setSelectedApplicant(app)} style={{cursor:'pointer',flexShrink:0}}>
+                          <Av name={app.full_name||app.username} pic={app.profile_picture} size={34} dark={dark}/>
+                        </div>
+                        <div style={{flex:1,minWidth:0,cursor:'pointer'}} onClick={()=>setSelectedApplicant(app)}>
                           <div style={{fontSize:13,fontWeight:700,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{app.full_name||app.username}</div>
                           <div style={{fontSize:11,color:T.textMuted,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{app.email}</div>
                         </div>
                         <div style={{display:'flex',gap:6}}>
+                          <button onClick={()=>setSelectedApplicant(app)} style={{padding:'5px 10px',borderRadius:8,border:'1px solid '+T.cardBorder,background:T.btnGhost,color:T.btnGhostTxt,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>View</button>
                           <button onClick={()=>handleApplication(app.id,'accepted')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(34,197,94,.15)':'#f0fdf4',color:'#22c55e',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Accept</button>
                           <button onClick={()=>handleApplication(app.id,'rejected')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(239,68,68,.15)':'#fef2f2',color:'#ef4444',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Reject</button>
                         </div>
@@ -416,6 +421,84 @@ export default function AdminDashboard() {
   );
 }
 type ThemeType = ReturnType<typeof mkS>;
+
+function ApplicantPanel({app,onClose,onAccept,onReject,dark,T}:{app:Application;onClose:()=>void;onAccept:()=>void;onReject:()=>void;dark:boolean;T:ReturnType<typeof mkS>}) {
+  const skills = app.skills ? app.skills.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  return (
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:9000,display:'flex',alignItems:'stretch',justifyContent:'flex-end'}}>
+      <div style={{width:'100%',maxWidth:420,background:T.card,height:'100%',overflowY:'auto',boxShadow:'-8px 0 40px rgba(0,0,0,.2)',display:'flex',flexDirection:'column'}}>
+        {/* Header */}
+        <div style={{padding:'18px 20px',borderBottom:'1px solid '+T.cardBorder,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <span style={{fontSize:15,fontWeight:800,color:T.text}}>Applicant Profile</span>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:'50%',border:'1px solid '+T.cardBorder,background:T.btnGhost,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',color:T.text}}>✕</button>
+        </div>
+
+        <div style={{padding:'20px',flex:1}}>
+          {/* Avatar + name */}
+          <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:20}}>
+            <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',position:'relative',background:getColor(app.full_name?.charCodeAt(0)||0),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              {app.profile_picture&&(app.profile_picture.startsWith('data:')||app.profile_picture.startsWith('http'))&&<img src={app.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
+              <span style={{fontSize:22,fontWeight:800,color:'#fff'}}>{getInit(app.full_name||app.username)}</span>
+            </div>
+            <div>
+              <div style={{fontSize:16,fontWeight:800,color:T.text}}>{app.full_name||app.username}</div>
+              <div style={{fontSize:12,color:T.textMuted,marginTop:2}}>{app.email}</div>
+              {app.location&&<div style={{fontSize:12,color:T.textMuted,marginTop:1}}>📍 {app.location}</div>}
+            </div>
+          </div>
+
+          {/* Contact */}
+          {app.phone_number&&<div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Contact</div>
+            <div style={{fontSize:13,color:T.text}}>📞 {app.phone_number}</div>
+          </div>}
+
+          {/* Bio */}
+          {app.bio&&<div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>About</div>
+            <div style={{fontSize:13,color:T.text,lineHeight:1.6,background:dark?'#252525':'#f8f8f8',padding:'10px 12px',borderRadius:8}}>{app.bio}</div>
+          </div>}
+
+          {/* Skills */}
+          {skills.length>0&&<div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}}>Skills</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {skills.map((s,i)=><span key={i} style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:100,background:dark?'rgba(167,139,250,.2)':'#f5f3ff',color:'#a78bfa'}}>{s}</span>)}
+            </div>
+          </div>}
+
+          {/* Experience */}
+          {app.experience&&<div style={{marginBottom:14}}>
+            <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Experience</div>
+            <div style={{fontSize:13,color:T.text,lineHeight:1.6,background:dark?'#252525':'#f8f8f8',padding:'10px 12px',borderRadius:8,whiteSpace:'pre-wrap'}}>{app.experience}</div>
+          </div>}
+
+          {/* CV */}
+          {app.cv_url&&<div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>CV / Portfolio</div>
+            <a href={app.cv_url} target="_blank" rel="noreferrer" style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:13,color:'#3b82f6',fontWeight:600,textDecoration:'none'}}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              View CV / Portfolio
+            </a>
+          </div>}
+
+          {/* No profile data */}
+          {!app.bio&&!app.skills&&!app.experience&&!app.cv_url&&(
+            <div style={{textAlign:'center',padding:'24px',color:T.textMuted,fontSize:13,background:dark?'#252525':'#f8f8f8',borderRadius:10}}>
+              This applicant hasn't filled their profile yet.
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div style={{padding:'16px 20px',borderTop:'1px solid '+T.cardBorder,display:'flex',gap:10,flexShrink:0}}>
+          <button onClick={onReject} style={{flex:1,padding:'10px',borderRadius:9,border:'none',background:dark?'rgba(239,68,68,.15)':'#fef2f2',color:'#ef4444',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Reject</button>
+          <button onClick={onAccept} style={{flex:2,padding:'10px',borderRadius:9,border:'none',background:'#22c55e',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Accept Application</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AttModal({current,onSave,onClose,dark}:{current:AttendanceRecord;onSave:(s:'office'|'remote'|'away',note:string)=>void;onClose:()=>void;dark:boolean}) {
   const [status,setStatus] = useState<'office'|'remote'|'away'>(current.status);
