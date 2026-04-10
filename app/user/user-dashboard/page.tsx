@@ -93,7 +93,7 @@ const SL:{[k:string]:string} = {office:'In Office',remote:'Remote',away:'Away'};
 export default function UserDashboard() {
   const router = useRouter();
   const [nav, setNav] = useState('overview');
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('timso_dark')==='1'; } catch { return false; } });
   const [user, setUser] = useState<User|null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -106,6 +106,8 @@ export default function UserDashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [myApps, setMyApps] = useState<JobApp[]>([]);
   const [applying, setApplying] = useState<number|string|null>(null);
+  const [resigning, setResigning] = useState(false);
+  const [resignPending, setResignPending] = useState(false);
   const [jobSearch, setJobSearch] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
@@ -125,6 +127,21 @@ export default function UserDashboard() {
   useEffect(() => { const t=setInterval(()=>setTime(new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})),1000); setTime(new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})); return()=>clearInterval(t); }, []);
   useEffect(() => { setMyAtt(getAtt()); }, []);
 
+  // Auto presence: set online when tab opens, away when tab closes
+  useEffect(() => {
+    if (!user?.id) return;
+    const setPresence = async (status: 'office'|'remote'|'away') => {
+      const saved = getAtt();
+      const s = status === 'away' ? 'away' : (saved.status === 'away' ? 'office' : saved.status);
+      try { await axios.post(`${API}/api/attendance`, { status: s, note: saved.note }); } catch {}
+    };
+    setPresence('office');
+    const onHide = () => { if (document.visibilityState === 'hidden') setPresence('away'); };
+    const onShow = () => { if (document.visibilityState === 'visible') setPresence('office'); };
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' ? onHide() : onShow());
+    return () => document.removeEventListener('visibilitychange', () => {});
+  }, [user?.id]);
+
   const fetchTeam = useCallback(async (silent=false) => {
     if(!silent) setLdTeam(true);
     try { const r=await axios.get(`${API}/api/attendance/team`); const d=r.data?.data?.team||r.data?.team||r.data; if(Array.isArray(d)) setTeam(d.map((m:TeamMember)=>({...m,name:m.full_name||m.name||m.username||'Unknown',bg:getColor(m.id)}))); } catch { setTeam([]); }
@@ -142,12 +159,13 @@ export default function UserDashboard() {
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTeam]);
 
-  useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>{ fetchTasks(); showToast('New task assigned!'); }, attendance_updated: ()=>fetchTeam(true), removed_from_company: ()=>{ showToast('Removed from company','error'); setTimeout(()=>{ window.location.href='/find-company'; },2000); } }, !!user?.id);
+  useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>{ fetchTasks(); showToast('New task assigned!'); }, attendance_updated: ()=>fetchTeam(true), removed_from_company: ()=>{ showToast('Removed from company','error'); setTimeout(()=>{ window.location.href='/find-company'; },2000); }, resign_approved: ()=>{ showToast('Resign approved! Redirecting...'); setTimeout(()=>{ window.location.href='/find-company'; },2000); }, resign_rejected: ()=>{ setResignPending(false); showToast('Resign request rejected','error'); } }, !!user?.id);
 
   const handleSaveAtt = async (status:'office'|'remote'|'away', note:string) => { const r=saveAtt(status,note); setMyAtt(r); try { await axios.post(`${API}/api/attendance`,{status,note}); fetchTeam(true); } catch {} showToast('Status updated!'); };
   const handleDeleteTask = async (id:number|string) => { setDeletingTask(id); try { await axios.delete(`${API}/api/tasks/${id}`); fetchTasks(); showToast('Task deleted!'); } catch { showToast('Failed','error'); } finally { setDeletingTask(null); } };
   const handleUpdateTaskStatus = async (id:number|string, status:'todo'|'in_progress'|'done') => { try { await axios.patch(`${API}/api/tasks/${id}/status`,{status}); fetchTasks(); } catch { showToast('Failed','error'); } };
   const handleApplyJob = async (jobId:number|string, title:string) => { setApplying(jobId); try { await axios.post(`${API}/api/jobs/${jobId}/apply`,{}); showToast('Applied to '+title+'!'); fetchMyApps(); } catch(e:unknown) { const ax=e as {response?:{data?:{message?:string}}}; showToast(ax?.response?.data?.message||'Failed','error'); } finally { setApplying(null); } };
+  const handleResign = async () => { if (!confirm('Submit resign request to admin?')) return; setResigning(true); try { await axios.post(`${API}/api/companies/resign`,{}); setResignPending(true); showToast('Resign request sent to admin!'); } catch(e:unknown) { const ax=e as {response?:{data?:{message?:string}}}; showToast(ax?.response?.data?.message||'Failed','error'); } finally { setResigning(false); } };
   const logout = async () => { try{await axios.post(`${API}/api/auth/logout`,{});}catch{} clearTok(); router.push('/login'); };
 
   const name = user?.full_name||user?.username||'User';
@@ -209,7 +227,7 @@ export default function UserDashboard() {
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,fontWeight:600,color:T.textMuted}}>{time}</span>
             {/* Dark mode toggle */}
-            <button onClick={()=>setDark(d=>!d)} style={{width:40,height:22,borderRadius:100,border:'none',background:dark?'#f97316':'#ddd',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}} title={dark?'Light mode':'Dark mode'}>
+            <button onClick={()=>setDark(d=>{ const nd=!d; try{localStorage.setItem('timso_dark',nd?'1':'0');}catch{} return nd; })} style={{width:40,height:22,borderRadius:100,border:'none',background:dark?'#f97316':'#ddd',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}} title={dark?'Light mode':'Dark mode'}>
               <div style={{position:'absolute',top:3,left:dark?20:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s',boxShadow:'0 1px 4px rgba(0,0,0,.2)'}}/>
             </button>
             <button onClick={()=>setShowAtt(true)} style={{...btnStyle,padding:'7px 14px',fontSize:12}}>Update Status</button>
@@ -349,17 +367,19 @@ export default function UserDashboard() {
           {nav==='jobs'&&(
             <div>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
-                <div><div style={{fontSize:18,fontWeight:800,color:T.text}}>Find a Job</div><div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{filteredJobs.length} openings</div></div>
-                <input style={{border:'1px solid '+T.inputBorder,borderRadius:8,padding:'7px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:200}} placeholder="Search jobs..." value={jobSearch} onChange={e=>setJobSearch(e.target.value)}/>
+                <div><div style={{fontSize:18,fontWeight:800,color:T.text}}>Find a Job</div><div style={{fontSize:13,color:T.textMuted,marginTop:2}}>{jobs.length} openings</div></div>
+                <button onClick={handleResign} disabled={resigning||resignPending} style={{padding:'8px 16px',borderRadius:9,border:'none',background:resignPending?(dark?'rgba(239,68,68,.2)':'#fef2f2'):(dark?'rgba(239,68,68,.15)':'#fef2f2'),color:'#ef4444',fontSize:13,fontWeight:700,cursor:resignPending?'default':'pointer',fontFamily:'Outfit,sans-serif',opacity:(resigning||resignPending)?0.7:1}}>
+                  {resigning?'Sending...':(resignPending?'Resign Pending':'Resign from Company')}
+                </button>
               </div>
-              {filteredJobs.length===0?
+              {jobs.length===0?
                 <div style={{textAlign:'center',padding:'44px 24px',background:T.card,border:'1.5px dashed '+T.cardBorder,borderRadius:14}}>
                   <div style={{fontSize:36,marginBottom:10}}>🔍</div>
                   <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:4}}>No jobs found</div>
                   <div style={{fontSize:13,color:T.textMuted}}>Try a different search</div>
                 </div>:
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
-                {filteredJobs.map(j=>{
+                {jobs.map(j=>{
                   const app=getAppStatus(j.id);
                   return (
                     <div key={j.id} style={{background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,padding:'16px 18px',display:'flex',flexDirection:'column',gap:10}}>

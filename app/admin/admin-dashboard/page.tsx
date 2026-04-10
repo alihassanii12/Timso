@@ -91,7 +91,7 @@ const SL:{[k:string]:string} = {office:'In Office',remote:'Remote',away:'Away'};
 export default function AdminDashboard() {
   const router = useRouter();
   const [nav, setNav] = useState('overview');
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem('timso_dark')==='1'; } catch { return false; } });
   const [user, setUser] = useState<User|null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -105,6 +105,7 @@ export default function AdminDashboard() {
   const [taskLoading, setTaskLoading] = useState(false);
   const [ldTeam, setLdTeam] = useState(true);
   const [deletingTask, setDeletingTask] = useState<number|string|null>(null);
+  const [resignRequests, setResignRequests] = useState<{id:number|string;user_id:number|string;full_name?:string;email?:string;username?:string;profile_picture?:string;created_at?:string}[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
   const T = mkS(dark);
@@ -131,9 +132,10 @@ export default function AdminDashboard() {
   const fetchTasks = useCallback(async () => { try { const r=await axios.get(`${API}/api/tasks`); const d=r.data?.data?.tasks||r.data?.data||r.data; if(Array.isArray(d)) setTasks(d); } catch {} }, []);
   const fetchApplications = useCallback(async () => { if(!user?.company_id) return; try { const r=await axios.get(`${API}/api/companies/applications`); if(r.data?.success) setApplications(r.data.applications||[]); } catch {} }, [user?.company_id]);
   const fetchAssignUsers = useCallback(async () => { try { const r=await axios.get(`${API}/api/tasks/users`); setAssignUsers(r.data?.data?.users||r.data?.users||[]); } catch {} }, []);
+  const fetchResignRequests = useCallback(async () => { if(!user?.company_id) return; try { const r=await axios.get(`${API}/api/companies/resign-requests`); setResignRequests(r.data?.requests||[]); } catch {} }, [user?.company_id]);
 
   useEffect(() => { fetchTeam(); fetchTasks(); fetchAssignUsers(); }, [fetchTeam, fetchTasks, fetchAssignUsers]);
-  useEffect(() => { if(user?.company_id) fetchApplications(); }, [user?.company_id, fetchApplications]);
+  useEffect(() => { if(user?.company_id) { fetchApplications(); fetchResignRequests(); } }, [user?.company_id, fetchApplications, fetchResignRequests]);
 
   // 30s polling for team attendance
   useEffect(() => {
@@ -141,11 +143,12 @@ export default function AdminDashboard() {
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTeam]);
 
-  useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>fetchTasks(), attendance_updated: ()=>fetchTeam(true) }, !!user?.id);
+  useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>fetchTasks(), attendance_updated: ()=>fetchTeam(true), resign_request: ()=>{ fetchResignRequests(); showToast('New resign request received!'); } }, !!user?.id);
 
   const handleSaveAtt = async (status:'office'|'remote'|'away', note:string) => { const r=saveAtt(status,note); setMyAtt(r); try { await axios.post(`${API}/api/attendance`,{status,note}); fetchTeam(true); } catch {} showToast('Status updated!'); };
   const handleAssignTask = async (d:{title:string;description:string;assigned_to:string;priority:string;due_date:string}) => { setTaskLoading(true); try { await axios.post(`${API}/api/tasks`,d); showToast('Task assigned!'); setShowTask(false); fetchTasks(); } catch { showToast('Failed','error'); } finally { setTaskLoading(false); } };
   const handleApplication = async (id:number|string, status:'accepted'|'rejected') => { try { await axios.post(`${API}/api/companies/handle-application`,{applicationId:id,status}); showToast(`Application ${status}!`); fetchApplications(); fetchTeam(true); } catch { showToast('Failed','error'); } };
+  const handleResignAction = async (userId:number|string, action:'approve'|'reject') => { try { await axios.post(API+'/api/companies/handle-resign',{userId,action}); showToast('Resign '+action+'d!'); fetchResignRequests(); if(action==='approve') fetchTeam(true); } catch { showToast('Failed','error'); } };
   const handleDeleteTask = async (id:number|string) => { setDeletingTask(id); try { await axios.delete(`${API}/api/tasks/${id}`); fetchTasks(); showToast('Task deleted!'); } catch { showToast('Failed','error'); } finally { setDeletingTask(null); } };
   const handleUpdateTaskStatus = async (id:number|string, status:'todo'|'in_progress'|'done') => { try { await axios.patch(`${API}/api/tasks/${id}/status`,{status}); fetchTasks(); } catch { showToast('Failed','error'); } };
   const logout = async () => { try{await axios.post(`${API}/api/auth/logout`,{});}catch{} clearTok(); router.push('/login'); };
@@ -216,7 +219,7 @@ export default function AdminDashboard() {
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:12,fontWeight:600,color:T.textMuted}}>{time}</span>
             {/* Dark mode toggle */}
-            <button onClick={()=>setDark(d=>!d)} style={{width:40,height:22,borderRadius:100,border:'none',background:dark?'#f97316':'#ddd',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}} title={dark?'Light mode':'Dark mode'}>
+            <button onClick={()=>setDark(d=>{ const nd=!d; try{localStorage.setItem('timso_dark',nd?'1':'0');}catch{} return nd; })} style={{width:40,height:22,borderRadius:100,border:'none',background:dark?'#f97316':'#ddd',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}} title={dark?'Light mode':'Dark mode'}>
               <div style={{position:'absolute',top:3,left:dark?20:3,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s',boxShadow:'0 1px 4px rgba(0,0,0,.2)'}}/>
             </button>
             <button onClick={()=>setShowAtt(true)} style={{...btnStyle,padding:'7px 14px',fontSize:12}}>Update Status</button>
@@ -294,6 +297,30 @@ export default function AdminDashboard() {
                         <div style={{display:'flex',gap:6}}>
                           <button onClick={()=>handleApplication(app.id,'accepted')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(34,197,94,.15)':'#f0fdf4',color:'#22c55e',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Accept</button>
                           <button onClick={()=>handleApplication(app.id,'rejected')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(239,68,68,.15)':'#fef2f2',color:'#ef4444',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resign Requests */}
+              {resignRequests.length>0&&(
+                <div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                    <div style={{fontSize:15,fontWeight:800,color:T.text}}>Resign Requests <span style={{fontSize:12,color:T.textMuted,fontWeight:500}}>({resignRequests.length})</span></div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                    {resignRequests.map(req=>(
+                      <div key={req.id} style={{...cardStyle,padding:'11px 14px',display:'flex',alignItems:'center',gap:10}}>
+                        <Av name={req.full_name||req.username} pic={req.profile_picture} size={34} dark={dark}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{req.full_name||req.username}</div>
+                          <div style={{fontSize:11,color:T.textMuted}}>{req.email}</div>
+                        </div>
+                        <div style={{display:'flex',gap:6}}>
+                          <button onClick={()=>handleResignAction(req.user_id,'approve')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(239,68,68,.15)':'#fef2f2',color:'#ef4444',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Approve</button>
+                          <button onClick={()=>handleResignAction(req.user_id,'reject')} style={{padding:'5px 12px',borderRadius:8,border:'none',background:dark?'rgba(255,255,255,.06)':'#f5f5f5',color:T.textSub,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Reject</button>
                         </div>
                       </div>
                     ))}
