@@ -27,7 +27,7 @@ const setupAxios = () => {
   });
 };
 
-interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; }
+interface User { id?:number|string; full_name?:string; username?:string; email?:string; role?:string; profile_picture?:string; company_id?:number|string; company_name?:string; company_logo?:string; }
 interface TeamMember { id:number|string; full_name?:string; name?:string; username?:string; role?:string; job_role?:string; status?:'office'|'remote'|'away'; note?:string; since?:string; profile_picture?:string; bg?:string; }
 interface Task { id:number|string; title:string; assigned_to:number|string; assigned_to_name?:string; assigned_to_email?:string; assigned_to_username?:string; assigned_by:number|string; assigned_by_name?:string; assigned_to_picture?:string; status:'todo'|'in_progress'|'done'; priority:'low'|'medium'|'high'; due_date?:string; created_at?:string; }
 interface Application { id:number|string; user_id:number|string; status:'pending'|'accepted'|'rejected'; full_name?:string; email?:string; username?:string; profile_picture?:string; bio?:string; skills?:string; experience?:string; location?:string; phone_number?:string; cv_url?:string; }
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
     axios.get(`${API}/api/auth/me`).then(async r => {
       const u = r.data?.user||r.data?.data?.user||r.data?.data||r.data;
       if (!u?.id||u.role!=='admin') { window.location.href='/login'; return; }
-      if (u.company_id) { try { const cr=await axios.get(`${API}/api/companies`); const c=(cr.data?.companies||[]).find((x:{id:number|string;name:string})=>String(x.id)===String(u.company_id)); if(c) u.company_name=c.name; } catch {} }
+      if (u.company_id) { try { const cr=await axios.get(`${API}/api/companies`); const c=(cr.data?.companies||[]).find((x:{id:number|string;name:string;logo_url?:string})=>String(x.id)===String(u.company_id)); if(c) { u.company_name=c.name; u.company_logo=c.logo_url||null; } } catch {} }
       setUser(u);
     }).catch(()=>{ window.location.href='/login'; });
   }, []);
@@ -174,7 +174,12 @@ export default function AdminDashboard() {
       {/* SIDEBAR */}
       <aside style={{width:236,height:'100vh',background:T.sidebar,borderRight:`1.5px solid ${T.sidebarBorder}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden',transition:'background .2s'}}>
         <div style={{padding:'16px 14px 12px',display:'flex',alignItems:'center',gap:9,borderBottom:`1.5px solid ${T.sidebarBorder}`}}>
-          <div style={{width:30,height:30,background:T.btnPrimary,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:T.btnPrimaryTxt,fontWeight:900,fontSize:15,flexShrink:0}}>T</div>
+          <div style={{width:30,height:30,background:T.btnPrimary,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',color:T.btnPrimaryTxt,fontWeight:900,fontSize:15,flexShrink:0,overflow:'hidden'}}>
+            {user?.company_logo&&(user.company_logo.startsWith('data:')||user.company_logo.startsWith('http'))
+              ?<img src={user.company_logo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              :<span>T</span>
+            }
+          </div>
           <span style={{fontSize:16,fontWeight:900,letterSpacing:'-.4px',color:T.text}}>timso</span>
           <span style={{marginLeft:'auto',fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:100,background:'linear-gradient(135deg,#f97316,#ef4444)',color:'#fff'}}>ADMIN</span>
         </div>
@@ -617,9 +622,11 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
   const [saving,setSaving] = useState(false);
   const [savingPw,setSavingPw] = useState(false);
   const [uploading,setUploading] = useState(false);
+  const [uploadingLogo,setUploadingLogo] = useState(false);
   const save = async()=>{setSaving(true);try{const r=await axios.put(API+'/api/auth/profile',{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
   const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(API+'/api/auth/change-password',{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(API+'/api/avatar/upload',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
+  const uploadLogo = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploadingLogo(true);try{const fd=new FormData();fd.append('logo',f);const r=await axios.post(API+'/api/avatar/company-logo',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,company_logo:r.data.data.logo_url} as User);showToast('Company logo updated!');}}catch{showToast('Upload failed','error');}finally{setUploadingLogo(false);};};
   const inp = {border:'1px solid '+T.inputBorder,borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:'100%',boxSizing:'border-box' as const};
   const lbl = {fontSize:12,fontWeight:700 as const,color:T.textSub,display:'block' as const,marginBottom:5};
   const sec = {background:T.card,border:'1px solid '+T.cardBorder,borderRadius:14,padding:'18px',marginBottom:10};
@@ -637,6 +644,24 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
             {uploading?'Uploading...':'Upload Photo'}
             <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
           </label>
+        </div>
+      </div>
+      <div style={sec}>
+        <div style={{fontSize:11,fontWeight:800,color:T.textMuted,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:12}}>Company Logo</div>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{width:52,height:52,borderRadius:12,overflow:'hidden',position:'relative',background:T.navHover,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,border:'1px solid '+T.cardBorder}}>
+            {user?.company_logo&&(user.company_logo.startsWith('data:')||user.company_logo.startsWith('http'))
+              ?<img src={user.company_logo} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+              :<span style={{fontSize:16,fontWeight:800,color:T.textMuted}}>{user?.company_name?.slice(0,2).toUpperCase()||'CO'}</span>
+            }
+          </div>
+          <div>
+            <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
+              {uploadingLogo?'Uploading...':'Upload Logo'}
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadLogo}/>
+            </label>
+            <div style={{fontSize:11,color:T.textMuted,marginTop:5}}>Shown in Find Company page</div>
+          </div>
         </div>
       </div>
       <div style={sec}>

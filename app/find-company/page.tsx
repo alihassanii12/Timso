@@ -8,7 +8,7 @@ const getToken = () => typeof window !== 'undefined' ? localStorage.getItem('tim
 const authH = () => { const t = getToken(); return t ? { Authorization: `Bearer ${t}` } : {}; };
 
 interface User { id?:number|string; full_name?:string; username?:string; email?:string; profile_picture?:string; bio?:string; skills?:string; experience?:string; location?:string; phone_number?:string; cv_url?:string; }
-interface Company { id:number|string; name:string; description?:string; admin_id:number|string; }
+interface Company { id:number|string; name:string; description?:string; admin_id:number|string; logo_url?:string; }
 interface Job { id:number|string; title:string; description?:string; location:string; type:string; salary?:string; tags:string[]; created_at:string; }
 interface JobApplication { id:number|string; job_id:number|string; status:string; }
 
@@ -16,10 +16,10 @@ const COLORS = ['#f97316','#a78bfa','#fbbf24','#34d399','#fb7185','#60a5fa'];
 const getColor = (id:number|string) => COLORS[Number(id)%COLORS.length];
 const getInit = (n?:string) => (n||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
 const timeAgo = (d:string) => { try { const s=Math.floor((Date.now()-new Date(d).getTime())/1000); if(s<60)return s+'s ago'; if(s<3600)return Math.floor(s/60)+'m ago'; if(s<86400)return Math.floor(s/3600)+'h ago'; return Math.floor(s/86400)+'d ago'; } catch { return d; } };
-const CE = ['🏢','🚀','💡','🌿','⚡','🎯','🔮','🏗️','🌊','🎪'];
-const JE = ['💼','🚀','⚡','🎯','🔮','🌿','🏗️','🎨','📊','🔧'];
-const getEmoji = (id:number|string) => CE[Number(id)%CE.length];
-const getJobEmoji = (id:number|string) => JE[Number(id)%JE.length];
+
+
+
+
 
 export default function FindCompanyPage() {
   const router = useRouter();
@@ -212,7 +212,13 @@ export default function FindCompanyPage() {
             </div>
           ):filtered.map((company,i)=>(
             <div key={company.id} onClick={()=>selectCompany(company)} style={{padding:'10px 12px',borderRadius:11,cursor:'pointer',transition:'all .12s',border:'1.5px solid '+(selectedCompany?.id===company.id?'rgba(249,115,22,.3)':'transparent'),background:selectedCompany?.id===company.id?'rgba(249,115,22,.05)':'transparent',marginBottom:4,display:'flex',alignItems:'center',gap:10}}>
-              <div style={{width:34,height:34,borderRadius:10,background:'rgba(249,115,22,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,flexShrink:0}}>{getEmoji(company.id)}</div>
+              <div style={{width:34,height:34,borderRadius:10,background:'rgba(249,115,22,.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,overflow:'hidden'}}>
+                {company.logo_url?(
+                  <img src={company.logo_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                ):(
+                  <span style={{fontSize:13,fontWeight:800,color:'#f97316'}}>{company.name.slice(0,2).toUpperCase()}</span>
+                )}
+              </div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:800,color:'#111',marginBottom:2}}>{company.name}</div>
                 <div style={{fontSize:11,color:'#aaa',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{company.description||'Click to view jobs'}</div>
@@ -241,7 +247,13 @@ export default function FindCompanyPage() {
         ):(
           <div style={{padding:'28px 28px'}}>
             <div style={{display:'flex',alignItems:'flex-start',gap:14,marginBottom:22}}>
-              <div style={{width:46,height:46,borderRadius:14,background:'rgba(249,115,22,.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{getEmoji(selectedCompany.id)}</div>
+              <div style={{width:46,height:46,borderRadius:14,background:'rgba(249,115,22,.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,overflow:'hidden'}}>
+                {selectedCompany.logo_url?(
+                  <img src={selectedCompany.logo_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                ):(
+                  <span style={{fontSize:16,fontWeight:800,color:'#f97316'}}>{selectedCompany.name.slice(0,2).toUpperCase()}</span>
+                )}
+              </div>
               <div style={{flex:1}}>
                 <h1 style={{fontSize:22,fontWeight:900,margin:'0 0 4px',letterSpacing:'-1px',fontFamily:'Outfit,sans-serif'}}>{selectedCompany.name}</h1>
                 {selectedCompany.description&&<p style={{fontSize:13,color:'#777',margin:'0 0 6px',lineHeight:1.6}}>{selectedCompany.description}</p>}
@@ -267,7 +279,13 @@ export default function FindCompanyPage() {
                   return (
                     <div key={job.id} style={{background:'#fff',border:'1.5px solid #ebebeb',borderRadius:14,padding:'18px',transition:'all .2s',animationDelay:i*.05+'s'}}>
                       <div style={{display:'flex',alignItems:'flex-start',gap:10,marginBottom:10}}>
-                        <div style={{width:34,height:34,borderRadius:10,background:'rgba(249,115,22,.08)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,flexShrink:0}}>{getJobEmoji(job.id)}</div>
+                        <div style={{width:34,height:34,borderRadius:10,background:'rgba(249,115,22,.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,overflow:'hidden'}}>
+                {selectedCompany.logo_url?(
+                  <img src={selectedCompany.logo_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                ):(
+                  <span style={{fontSize:11,fontWeight:800,color:'#f97316'}}>{selectedCompany.name.slice(0,2).toUpperCase()}</span>
+                )}
+              </div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:14,fontWeight:900,margin:'0 0 2px',color:'#111',fontFamily:'Outfit,sans-serif'}}>{job.title}</div>
                           <div style={{fontSize:11,color:'#aaa'}}>{selectedCompany.name} · {timeAgo(job.created_at)}</div>
