@@ -77,7 +77,7 @@ export default function OAuthComplete() {
         <div style={{width:40,height:40,border:'3px solid #f0f0f0',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin .7s linear infinite',margin:'0 auto 16px'}}/>
         <div style={{fontSize:14,color:'#888'}}>Setting up your account...</div>
       </div>
-      <style>{@keyframes spin{to{transform:rotate(360deg)}}}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
