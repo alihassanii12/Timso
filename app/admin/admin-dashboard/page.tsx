@@ -144,7 +144,7 @@ export default function AdminDashboard() {
     pollRef.current = setInterval(() => {
       fetchTeam(true);
       if (user?.company_id) fetchResignRequests();
-    }, 30000);
+    }, 10000);
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTeam, fetchResignRequests, user?.company_id]);
 

@@ -157,7 +157,7 @@ export default function UserDashboard() {
 
   // 30s polling for team attendance
   useEffect(() => {
-    pollRef.current = setInterval(() => fetchTeam(true), 30000);
+    pollRef.current = setInterval(() => fetchTeam(true), 10000);
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
   }, [fetchTeam]);
 
@@ -616,3 +616,4 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
     </div>
   );
 }
+
