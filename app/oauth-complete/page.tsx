@@ -1,11 +1,11 @@
 ﻿'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
 
-export default function OAuthComplete() {
+function OAuthCompleteInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [step, setStep] = useState<'loading'|'role'|'company'|'done'>('loading');
@@ -138,4 +138,12 @@ export default function OAuthComplete() {
   );
 
   return null;
+}
+
+export default function OAuthComplete() {
+  return (
+    <Suspense>
+      <OAuthCompleteInner />
+    </Suspense>
+  );
 }
