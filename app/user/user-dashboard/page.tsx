@@ -467,6 +467,18 @@ function ProfileSection({user,setUser,showToast,dark,T}:{user:User|null;setUser:
   const [saving,setSaving] = useState(false);
   const [uploading,setUploading] = useState(false);
 
+  // Sync form when user data loads (user starts as null)
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      fullName:user.full_name||'', username:user.username||'',
+      phone:user.phone_number||'', location:user.location||'',
+      bio:user.bio||'', skills:user.skills||'',
+      experience:user.experience||'', cvUrl:user.cv_url||''
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const save = async () => {
     setSaving(true);
     try {
@@ -555,6 +567,8 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
   const [saving,setSaving] = useState(false);
   const [savingPw,setSavingPw] = useState(false);
   const [uploading,setUploading] = useState(false);
+  // Sync when user loads
+  useEffect(() => { if(user?.id) setForm({fullName:user.full_name||'',username:user.username||''}); }, [user?.id]);
   const save = async()=>{setSaving(true);try{const r=await axios.put(API+'/api/auth/profile',{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
   const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(API+'/api/auth/change-password',{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(API+'/api/avatar/upload',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
