@@ -139,11 +139,14 @@ export default function AdminDashboard() {
   useEffect(() => { fetchTeam(); fetchTasks(); fetchAssignUsers(); }, [fetchTeam, fetchTasks, fetchAssignUsers]);
   useEffect(() => { if(user?.company_id) { fetchApplications(); fetchResignRequests(); } }, [user?.company_id, fetchApplications, fetchResignRequests]);
 
-  // 30s polling for team attendance
+  // 30s polling for team attendance + resign requests
   useEffect(() => {
-    pollRef.current = setInterval(() => fetchTeam(true), 30000);
+    pollRef.current = setInterval(() => {
+      fetchTeam(true);
+      if (user?.company_id) fetchResignRequests();
+    }, 30000);
     return () => { if(pollRef.current) clearInterval(pollRef.current); };
-  }, [fetchTeam]);
+  }, [fetchTeam, fetchResignRequests, user?.company_id]);
 
   useSSE({ tasks_updated: ()=>fetchTasks(), task_assigned: ()=>fetchTasks(), attendance_updated: ()=>fetchTeam(true), resign_request: ()=>{ fetchResignRequests(); showToast('New resign request received!'); } }, !!user?.id);
 
