@@ -165,7 +165,7 @@ export default function LoginPage() {
           </div>
 
           <div className="a-rise" style={{animationDelay:'.05s',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:'clamp(16px,3vw,24px)'}}>
-            <button className="social-btn">
+            <button className="social-btn" onClick={()=>window.location.href=(process.env.NEXT_PUBLIC_API_URL||"https://timso-backend-n5w1.vercel.app")+"/api/oauth/google"}>
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
                 <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
@@ -174,7 +174,7 @@ export default function LoginPage() {
               </svg>
               Google
             </button>
-            <button className="social-btn">
+            <button className="social-btn" onClick={()=>window.location.href=(process.env.NEXT_PUBLIC_API_URL||"https://timso-backend-n5w1.vercel.app")+"/api/oauth/github"}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="#0f0e0c">
                 <path d="M9 0C4.03 0 0 4.03 0 9c0 3.98 2.58 7.35 6.16 8.54.45.08.61-.2.61-.44v-1.53c-2.5.54-3.03-1.21-3.03-1.21-.41-1.04-1-1.32-1-1.32-.82-.56.06-.55.06-.55.9.06 1.38.93 1.38.93.8 1.37 2.1.97 2.61.74.08-.58.31-.97.57-1.19-1.99-.23-4.08-1-4.08-4.43 0-.98.35-1.78.93-2.41-.09-.23-.4-1.14.09-2.37 0 0 .76-.24 2.48.93A8.64 8.64 0 0 1 9 4.32c.77 0 1.54.1 2.26.3 1.72-1.17 2.48-.93 2.48-.93.49 1.23.18 2.14.09 2.37.58.63.93 1.43.93 2.41 0 3.44-2.1 4.2-4.1 4.42.32.28.61.83.61 1.67v2.47c0 .24.16.52.62.43A9.003 9.003 0 0 0 18 9c0-4.97-4.03-9-9-9z"/>
               </svg>
