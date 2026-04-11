@@ -498,6 +498,7 @@ function ProfileSection({user,setUser,showToast,dark,T}:{user:User|null;setUser:
     finally { setSaving(false); }
   };
 
+  const deleteAvatar = async()=>{try{await axios.delete(`${API}/api/avatar`);setUser({...user,profile_picture:undefined} as User);showToast('Photo removed!');}catch{showToast('Failed','error');}};
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>) => {
     const f=e.target.files?.[0]; if(!f) return; setUploading(true);
     try {
@@ -524,10 +525,13 @@ function ProfileSection({user,setUser,showToast,dark,T}:{user:User|null;setUser:
             {user?.profile_picture&&(user.profile_picture.startsWith('data:')||user.profile_picture.startsWith('http'))&&<img src={user.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
             <span style={{fontSize:22,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
           </div>
-          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
-            {uploading?'Uploading...':'Upload Photo'}
-            <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
-          </label>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
+              {uploading?'Uploading...':'Upload Photo'}
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
+            </label>
+            {user?.profile_picture&&<button onClick={deleteAvatar} style={{padding:'8px 14px',borderRadius:8,border:'1px solid '+T.cardBorder,background:T.btnGhost,color:'#ef4444',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Remove</button>}
+          </div>
         </div>
       </div>
 

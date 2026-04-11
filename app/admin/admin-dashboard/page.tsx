@@ -629,6 +629,7 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
   const save = async()=>{setSaving(true);try{const r=await axios.put(API+'/api/auth/profile',{fullName:form.fullName,username:form.username});if(r.data?.success){setUser({...user,full_name:form.fullName,username:form.username} as User);showToast('Profile updated!');}}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSaving(false);};};
   const changePw = async()=>{if(pw.new_!==pw.conf){showToast('Passwords do not match','error');return;}if(pw.new_.length<8){showToast('Min 8 characters','error');return;}setSavingPw(true);try{await axios.put(API+'/api/auth/change-password',{currentPassword:pw.cur,newPassword:pw.new_});showToast('Password changed!');setPw({cur:'',new_:'',conf:''});}catch(e:unknown){const ax=e as {response?:{data?:{message?:string}}};showToast(ax?.response?.data?.message||'Failed','error');}finally{setSavingPw(false);};};
   const uploadAvatar = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploading(true);try{const fd=new FormData();fd.append('avatar',f);const r=await axios.post(API+'/api/avatar/upload',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,profile_picture:r.data.data.avatar_url} as User);showToast('Avatar updated!');}}catch{showToast('Upload failed','error');}finally{setUploading(false);};};
+  const deleteAvatar = async()=>{try{await axios.delete(API+'/api/avatar');setUser({...user,profile_picture:undefined} as User);showToast('Photo removed!');}catch{showToast('Failed','error');}};
   const uploadLogo = async(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setUploadingLogo(true);try{const fd=new FormData();fd.append('logo',f);const r=await axios.post(API+'/api/avatar/company-logo',fd,{headers:{'Content-Type':'multipart/form-data'}});if(r.data?.success){setUser({...user,company_logo:r.data.data.logo_url} as User);showToast('Company logo updated!');}}catch{showToast('Upload failed','error');}finally{setUploadingLogo(false);};};
   const inp = {border:'1px solid '+T.inputBorder,borderRadius:8,padding:'8px 11px',fontSize:13,fontFamily:'Outfit,sans-serif',outline:'none',background:T.input,color:T.text,width:'100%',boxSizing:'border-box' as const};
   const lbl = {fontSize:12,fontWeight:700 as const,color:T.textSub,display:'block' as const,marginBottom:5};
@@ -643,10 +644,13 @@ function SettingsSection({user,setUser,showToast,dark,T}:{user:User|null;setUser
             {user?.profile_picture&&(user.profile_picture.startsWith('data:')||user.profile_picture.startsWith('http'))&&<img src={user.profile_picture} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>}
             <span style={{fontSize:17,fontWeight:800,color:'#fff'}}>{getInit(user?.full_name||user?.username)}</span>
           </div>
-          <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
-            {uploading?'Uploading...':'Upload Photo'}
-            <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
-          </label>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:8,background:T.btnPrimary,color:T.btnPrimaryTxt,fontSize:12,fontWeight:700,cursor:'pointer'}}>
+              {uploading?'Uploading...':'Upload Photo'}
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={uploadAvatar}/>
+            </label>
+            {user?.profile_picture&&<button onClick={deleteAvatar} style={{padding:'7px 12px',borderRadius:8,border:'1px solid '+T.btnGhostBorder,background:T.btnGhost,color:'#ef4444',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Outfit,sans-serif'}}>Remove</button>}
+          </div>
         </div>
       </div>
       <div style={sec}>

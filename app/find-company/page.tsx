@@ -32,6 +32,7 @@ export default function FindCompanyPage() {
   const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [applying, setApplying] = useState<number|string|null>(null);
+  const [redirecting, setRedirecting] = useState(false);
   const [toast, setToast] = useState<{msg:string;type:'success'|'error'}|null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({fullName:'',username:'',phone:'',location:'',bio:'',skills:'',experience:'',cvUrl:''});
@@ -63,9 +64,9 @@ export default function FindCompanyPage() {
       try {
         const r = await axios.get(`${API}/api/auth/me`, {withCredentials:true, headers:authH()});
         const u = r.data?.user||r.data?.data?.user||r.data?.data||r.data;
-        if (u?.company_id) { clearInterval(interval); router.push('/user/user-dashboard'); }
+        if (u?.company_id) { clearInterval(interval); setRedirecting(true); router.push('/user/user-dashboard'); }
       } catch {}
-    }, 15000);
+    }, 8000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -298,9 +299,25 @@ export default function FindCompanyPage() {
                       </div>
                       {job.description&&<p style={{fontSize:12,color:'#777',lineHeight:1.6,margin:'0 0 10px',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{job.description}</p>}
                       {job.salary&&<div style={{fontSize:13,fontWeight:800,color:'#16a34a',marginBottom:10}}>💰 {job.salary}</div>}
-                      <button onClick={()=>!isApplied&&handleApply(job.id,job.title)} disabled={isApplied||applying===job.id} style={{width:'100%',background:isApplied?'rgba(34,197,94,.1)':'#111',color:isApplied?'#16a34a':'#fff',border:'none',borderRadius:9,padding:'9px',fontSize:13,fontWeight:700,cursor:isApplied?'default':'pointer',fontFamily:'Outfit,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:6,opacity:(isApplied||applying===job.id)?0.8:1}}>
-                        {applying===job.id?<span style={{width:13,height:13,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',display:'inline-block',animation:'spin .65s linear infinite'}}/>:isApplied?<>✓ {appStatus?.status==='accepted'?'Accepted!':appStatus?.status==='rejected'?'Not selected':'Applied'}</>:<>Apply Now <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
-                      </button>
+                      {(() => {
+                        const st = appStatus?.status;
+                        const isRejected = st === 'rejected';
+                        const isAccepted = st === 'accepted';
+                        const isPending = st === 'applied' || st === 'reviewing';
+                        const bg = isRejected ? 'rgba(239,68,68,.1)' : (isApplied ? 'rgba(34,197,94,.1)' : '#111');
+                        const col = isRejected ? '#ef4444' : (isApplied ? '#16a34a' : '#fff');
+                        return (
+                          <button onClick={()=>!isApplied&&handleApply(job.id,job.title)} disabled={isApplied||applying===job.id} style={{width:'100%',background:bg,color:col,border:'none',borderRadius:9,padding:'9px',fontSize:13,fontWeight:700,cursor:isApplied?'default':'pointer',fontFamily:'Outfit,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                            {applying===job.id
+                              ? <span style={{width:13,height:13,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',display:'inline-block',animation:'spin .65s linear infinite'}}/>
+                              : isRejected ? '✕ Not Selected'
+                              : isAccepted ? '✓ Accepted!'
+                              : isPending ? <><span style={{width:10,height:10,border:'2px solid #16a34a44',borderTopColor:'#16a34a',borderRadius:'50%',display:'inline-block',animation:'spin .65s linear infinite'}}/> Pending...</>
+                              : <>Apply Now <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
+                            }
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 }) }
@@ -309,6 +326,12 @@ export default function FindCompanyPage() {
           </div>
         )}
       </div>
+      {redirecting&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:9999,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+          <div style={{width:48,height:48,border:'4px solid rgba(255,255,255,.2)',borderTopColor:'#f97316',borderRadius:'50%',animation:'spin .8s linear infinite'}}/>
+          <div style={{color:'#fff',fontSize:16,fontWeight:700,fontFamily:'Outfit,sans-serif'}}>Redirecting to dashboard...</div>
+        </div>
+      )}
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
