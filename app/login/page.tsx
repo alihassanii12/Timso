@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 
 const G = `
@@ -33,7 +33,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .btn-sub:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(249,115,22,.35)}
 .btn-sub:disabled{opacity:.5;pointer-events:none}
 .btn-sub>span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
-.social-btn{width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:none;color:#0f0e0c;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+.social-btn{width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer!important;color:#0f0e0c;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
 .social-btn:hover{border-color:#0f0e0c;background:#f8f7f4;transform:translateY(-1px)}
 .nav-a{transition:all .2s;text-decoration:none}
 .nav-a:hover{background:rgba(0,0,0,.05)}
@@ -44,14 +44,24 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [serverError, setServerError] = useState('');
+  const [serverError, setServerError] = useState(() => {
+    // Will be set in useEffect after mount
+    return '';
+  });
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // ✅ FIXED: single declaration, correct fallback
   const BASE = process.env.NEXT_PUBLIC_API_URL || 'https://timso-backend-n5w1.vercel.app';
+
+  useEffect(() => {
+    const err = searchParams.get('error');
+    if (err === 'google_not_configured') setServerError('Google login is not configured yet. Use email/password.');
+    else if (err === 'github_not_configured') setServerError('GitHub login is not configured yet. Use email/password.');
+    else if (err === 'oauth') setServerError('OAuth login failed. Please try again or use email/password.');
+  }, [searchParams]);
 
   useEffect(() =>  {
     const isMobile = window.innerWidth <= 768;

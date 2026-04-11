@@ -44,7 +44,7 @@ body.cd #cur path{fill:#fff!important;stroke:#fff!important}
 .btn-sub>span{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .btn-ghost{background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;cursor:none;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;transition:all .2s}
 .btn-ghost:hover{border-color:#0f0e0c;background:#f2f0eb}
-.social-btn{width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:none;color:#0f0e0c;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+.social-btn{width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.1);border-radius:14px;padding:13px;font-size:14px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer!important;color:#0f0e0c;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
 .social-btn:hover{border-color:#0f0e0c;background:#f8f7f4;transform:translateY(-1px)}
 .nav-a{transition:all .2s;text-decoration:none}
 .nav-a:hover{background:rgba(0,0,0,.05)}
