@@ -60,11 +60,15 @@ function OAuthCompleteInner() {
   const setRoleAPI = async (r: 'admin'|'user') => {
     setSaving(true); setError('');
     try {
+      console.log('🔄 Calling set-role API:', { role: r, token: token?.slice(0,20) + '...' });
+      
       const res = await axios.post(API + '/api/oauth/set-role', {
         token, role: r,
         companyName: r === 'admin' ? companyName : undefined,
         companyDescription: r === 'admin' ? companyDesc : undefined,
       }, { withCredentials: true });
+
+      console.log('✅ set-role response:', res.data);
 
       // Save new token
       const newToken = res.data?.accessToken;
@@ -80,8 +84,10 @@ function OAuthCompleteInner() {
         window.location.href = '/find-company';
       }
     } catch(e: unknown) {
-      const ax = e as {response?:{data?:{message?:string}}};
-      setError(ax?.response?.data?.message || 'Something went wrong');
+      console.error('❌ set-role error:', e);
+      const ax = e as {response?:{data?:{message?:string}, status?: number}};
+      console.error('Response:', ax?.response?.data, 'Status:', ax?.response?.status);
+      setError(ax?.response?.data?.message || 'Something went wrong. Please try again.');
       setSaving(false);
     }
   };
