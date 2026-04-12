@@ -18,6 +18,7 @@ function OAuthCompleteInner() {
   const isNew = params.get('new') === '1';
   const paramRole = params.get('role');
   const hasCompany = params.get('has_company') === '1';
+  const preset = params.get('preset'); // 'admin' if admin but no company yet
 
   useEffect(() => {
     if (!token) { router.push('/login'); return; }
@@ -26,15 +27,23 @@ function OAuthCompleteInner() {
     document.cookie = 'accessToken=' + encodeURIComponent(token) + '; path=/; SameSite=None; Secure; max-age=' + (15*60);
 
     if (isNew || !paramRole || paramRole === 'pending') {
-      setStep('role');
+      // New user — show role selection
+      // If preset=admin, skip to company step directly
+      if (preset === 'admin') {
+        setRole('admin');
+        setStep('company');
+      } else {
+        setStep('role');
+      }
     } else if (paramRole === 'admin') {
+      // Existing admin with company — go to dashboard
       router.push('/admin/admin-dashboard');
     } else if (hasCompany) {
       router.push('/user/user-dashboard');
     } else {
       router.push('/find-company');
     }
-  }, [token, isNew, paramRole, hasCompany, router]);
+  }, [token, isNew, paramRole, hasCompany, preset, router]);
 
   const handleRoleSelect = async () => {
     if (!role) return;
