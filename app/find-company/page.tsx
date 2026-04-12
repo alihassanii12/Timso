@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
@@ -41,7 +41,7 @@ export default function FindCompanyPage() {
 
   const showToast = (msg:string, type:'success'|'error'='success') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
 
-  // Initial load â€” only runs once
+  // Initial load — only runs once
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -58,7 +58,7 @@ export default function FindCompanyPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Poll only for company_id acceptance â€” does NOT touch form state
+  // Poll only for company_id acceptance — does NOT touch form state
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -126,7 +126,7 @@ export default function FindCompanyPage() {
 
   return (
     <div style={{display:'flex',height:'100vh',overflow:'hidden',fontFamily:'Outfit,sans-serif',background:'#f5f5f5'}}>
-      {toast&&<div style={{position:'fixed',bottom:20,right:20,zIndex:9999,padding:'11px 16px',borderRadius:12,fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8,background:toast.type==='success'?'#111':'#ef4444',color:'#fff',boxShadow:'0 6px 24px rgba(0,0,0,.15)'}}>{toast.type==='success'?'âœ“':'âœ•'} {toast.msg}</div>}
+      {toast&&<div style={{position:'fixed',bottom:20,right:20,zIndex:9999,padding:'11px 16px',borderRadius:12,fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8,background:toast.type==='success'?'#111':'#ef4444',color:'#fff',boxShadow:'0 6px 24px rgba(0,0,0,.15)'}}>{toast.type==='success'?'✓':'✕'} {toast.msg}</div>}
 
       {/* LEFT PANEL */}
       <div style={{width:360,flexShrink:0,borderRight:'1.5px solid #ebebeb',display:'flex',flexDirection:'column',background:'#fff',overflow:'hidden'}}>
@@ -208,7 +208,7 @@ export default function FindCompanyPage() {
             </div>
           )):filtered.length===0?(
             <div style={{textAlign:'center',padding:'28px 16px',color:'#aaa'}}>
-              <div style={{fontSize:28,marginBottom:8}}>ðŸ™ï¸</div>
+              <div style={{fontSize:28,marginBottom:8}}>🏙️</div>
               <div style={{fontSize:13,fontWeight:600}}>{search?'No results':'No companies yet'}</div>
             </div>
           ):filtered.map((company,i)=>(
@@ -235,13 +235,12 @@ export default function FindCompanyPage() {
         {myApplications.length>0&&(
           <div style={{background:'rgba(249,115,22,.06)',borderBottom:'1px solid rgba(249,115,22,.15)',padding:'10px 28px',display:'flex',alignItems:'center',gap:8}}>
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#f97316" strokeWidth="2.2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span style={{fontSize:12,fontWeight:600,color:'#d45e00'}}>{myApplications.filter(a=>a.status==='applied').length} application(s) pending â€” you'll be redirected when accepted</span>
+            <span style={{fontSize:12,fontWeight:600,color:'#d45e00'}}>{myApplications.filter(a=>a.status==='applied').length} application(s) pending — you'll be redirected when accepted</span>
           </div>
         )}
 
         {!selectedCompany?(
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100%',textAlign:'center',padding:40}}>
-            <div style={{fontSize:56,marginBottom:14}}>ðŸ‘ˆ</div>
             <h2 style={{fontSize:20,fontWeight:900,margin:'0 0 8px',letterSpacing:'-1px',fontFamily:'Outfit,sans-serif'}}>Select a company</h2>
             <p style={{color:'#aaa',fontSize:13,maxWidth:260,lineHeight:1.6}}>Click on a company to see their open positions and apply.</p>
           </div>
@@ -268,7 +267,7 @@ export default function FindCompanyPage() {
               </div>
             ):jobs.length===0?(
               <div style={{textAlign:'center',padding:'44px 28px',background:'#fff',border:'1.5px dashed #e5e5e5',borderRadius:14}}>
-                <div style={{fontSize:36,marginBottom:10}}>ðŸ“­</div>
+                <div style={{fontSize:36,marginBottom:10}}>📭</div>
                 <h3 style={{fontSize:16,fontWeight:900,margin:'0 0 5px',fontFamily:'Outfit,sans-serif'}}>No open positions</h3>
                 <p style={{color:'#aaa',margin:0,fontSize:13}}>{selectedCompany.name} hasn't posted any jobs yet.</p>
               </div>
@@ -289,7 +288,7 @@ export default function FindCompanyPage() {
               </div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:14,fontWeight:900,margin:'0 0 2px',color:'#111',fontFamily:'Outfit,sans-serif'}}>{job.title}</div>
-                          <div style={{fontSize:11,color:'#aaa'}}>{selectedCompany.name} Â· {timeAgo(job.created_at)}</div>
+                          <div style={{fontSize:11,color:'#aaa'}}>{selectedCompany.name} · {timeAgo(job.created_at)}</div>
                         </div>
                       </div>
                       <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:10}}>
@@ -298,7 +297,7 @@ export default function FindCompanyPage() {
                         {job.tags?.slice(0,2).map(t=><span key={t} style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:100,background:'rgba(249,115,22,.08)',color:'#d45e00'}}>{t}</span>)}
                       </div>
                       {job.description&&<p style={{fontSize:12,color:'#777',lineHeight:1.6,margin:'0 0 10px',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{job.description}</p>}
-                      {job.salary&&<div style={{fontSize:13,fontWeight:800,color:'#16a34a',marginBottom:10}}>ðŸ’° {job.salary}</div>}
+                      {job.salary&&<div style={{fontSize:13,fontWeight:800,color:'#16a34a',marginBottom:10}}>💰 {job.salary}</div>}
                       {(() => {
                         const st = appStatus?.status;
                         const isRejected = st === 'rejected';
@@ -310,8 +309,8 @@ export default function FindCompanyPage() {
                           <button onClick={()=>!isApplied&&handleApply(job.id,job.title)} disabled={isApplied||applying===job.id} style={{width:'100%',background:bg,color:col,border:'none',borderRadius:9,padding:'9px',fontSize:13,fontWeight:700,cursor:isApplied?'default':'pointer',fontFamily:'Outfit,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                             {applying===job.id
                               ? <span style={{width:13,height:13,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',display:'inline-block',animation:'spin .65s linear infinite'}}/>
-                              : isRejected ? 'âœ• Not Selected'
-                              : isAccepted ? 'âœ“ Accepted!'
+                              : isRejected ? '✕ Not Selected'
+                              : isAccepted ? '✓ Accepted!'
                               : isPending ? <><span style={{width:10,height:10,border:'2px solid #16a34a44',borderTopColor:'#16a34a',borderRadius:'50%',display:'inline-block',animation:'spin .65s linear infinite'}}/> Pending...</>
                               : <>Apply Now <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
                             }
