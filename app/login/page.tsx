@@ -125,6 +125,9 @@ function LoginPageInner() {
 
       if (data?.requiresOtp) {
         router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      } else if (!data?.user?.role || data?.user?.role === 'pending') {
+        // OAuth user who hasn't set role yet
+        router.push(`/oauth-complete?token=${encodeURIComponent(token || '')}&new=1`);
       } else if (data?.user?.role === 'admin' || data?.user?.company_id) {
         router.push('/dashboard');
       } else {

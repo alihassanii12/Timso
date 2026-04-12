@@ -65,12 +65,20 @@ function OAuthCompleteInner() {
         companyName: r === 'admin' ? companyName : undefined,
         companyDescription: r === 'admin' ? companyDesc : undefined,
       }, { withCredentials: true });
-      if (res.data?.accessToken) {
-        localStorage.setItem('timso_token', res.data.accessToken);
-        document.cookie = 'accessToken=' + encodeURIComponent(res.data.accessToken) + '; path=/; SameSite=None; Secure; max-age=' + (15*60);
+
+      // Save new token
+      const newToken = res.data?.accessToken;
+      if (newToken) {
+        localStorage.setItem('timso_token', newToken);
+        document.cookie = 'accessToken=' + encodeURIComponent(newToken) + '; path=/; SameSite=None; Secure; max-age=' + (15*60);
       }
-      if (r === 'admin') router.push('/admin/admin-dashboard');
-      else router.push('/find-company');
+
+      // Route based on role
+      if (r === 'admin') {
+        window.location.href = '/admin/admin-dashboard';
+      } else {
+        window.location.href = '/find-company';
+      }
     } catch(e: unknown) {
       const ax = e as {response?:{data?:{message?:string}}};
       setError(ax?.response?.data?.message || 'Something went wrong');
